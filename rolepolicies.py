@@ -12,14 +12,16 @@ from logging.handlers import SysLogHandler
 from logging import Formatter
 import re
 
-
-
-parser = argparse.ArgumentParser(description=' !!! DESCRIPTION GOES HERE !!! \n\nExample: \n    python rolepolicies.py -sf ec2 -af Desc.* -rf \* -ef Allow -pf ^Amazon', formatter_class=RawTextHelpFormatter)
-parser.add_argument('-sf','--serviceFilter', help='Regular expression filter for the Service column.', required=False)
-parser.add_argument('-af','--actionFilter', help='Regular expression filter for the Action column.', required=False)
-parser.add_argument('-rf','--resourceFilter', help='Regular expression filter for the Resource column.', required=False)
-parser.add_argument('-ef','--effectFilter', help='Regular expression filter for the Effect column.', required=False)
-parser.add_argument('-pf','--policynameFilter', help='Regular expression filter for the Policy name column.', required=False)
+parser = argparse.ArgumentParser(
+    description=' !!! DESCRIPTION GOES HERE !!! \n\nExample: \n    python rolepolicies.py -sf ec2 -af Desc.* -rf \* -ef Allow -pf ^Amazon',
+    formatter_class=RawTextHelpFormatter)
+parser.add_argument('-sf', '--serviceFilter', help='Regular expression filter for the Service column.', required=False)
+parser.add_argument('-af', '--actionFilter', help='Regular expression filter for the Action column.', required=False)
+parser.add_argument('-rf', '--resourceFilter', help='Regular expression filter for the Resource column.',
+                    required=False)
+parser.add_argument('-ef', '--effectFilter', help='Regular expression filter for the Effect column.', required=False)
+parser.add_argument('-pf', '--policynameFilter', help='Regular expression filter for the Policy name column.',
+                    required=False)
 args = vars(parser.parse_args())
 
 # Syslog handler
@@ -33,7 +35,6 @@ logger.addHandler(syslog)
 
 
 def policy_enumerate():
-
     response1 = iam.list_attached_role_policies(RoleName=role)
     response2 = iam.list_role_policies(RoleName=role)
 
@@ -43,7 +44,8 @@ def policy_enumerate():
         role_policy1 = iamres.Policy(attached_policy['PolicyArn'])
 
         policy = iam.get_policy(PolicyArn=role_policy1.arn)
-        policy_version = iam.get_policy_version(PolicyArn=role_policy1.arn, VersionId=policy['Policy']['DefaultVersionId'])
+        policy_version = iam.get_policy_version(PolicyArn=role_policy1.arn,
+                                                VersionId=policy['Policy']['DefaultVersionId'])
 
         values = []
 
@@ -52,7 +54,8 @@ def policy_enumerate():
             effect = statement['Effect']
 
             for action in statement['Action']:
-                values.append([action.split(':')[0], action.split(':')[1], resource, effect, role_policy1.arn.split('/')[2]])
+                values.append(
+                    [action.split(':')[0], action.split(':')[1], resource, effect, role_policy1.arn.split('/')[2]])
 
     for policy_name in response2['PolicyNames']:
         role_policy2 = iamres.RolePolicy(role, policy_name)
@@ -77,7 +80,8 @@ def policy_enumerate():
     x.align["Policy name"] = "l"
 
     for value in values:
-        if args['serviceFilter'] == None and args['actionFilter'] == None and args['resourceFilter'] == None and args['effectFilter'] == None and args['policynameFilter'] == None:
+        if args['serviceFilter'] is None and args['actionFilter'] is None and args['resourceFilter'] is None and \
+                args['effectFilter'] is None and args['policynameFilter'] is None:
             x.add_row(value)
             continue
         all_matched = True
