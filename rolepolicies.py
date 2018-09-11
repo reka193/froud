@@ -4,6 +4,8 @@ import requests
 import json
 from prettytable import PrettyTable
 import argparse
+import ast
+from argparse import RawTextHelpFormatter
 
 import logging
 from logging.handlers import SysLogHandler
@@ -12,9 +14,12 @@ import re
 
 
 
-parser = argparse.ArgumentParser(description=' !!! DESCRIPTION GOES HERE !!! ')
-parser.add_argument('-rft','--regex-filter-type', help='Select the column you wish to filter. E.g. "Service", "Action", "Resource", "Effect" or "Policy name".', required=True)
-parser.add_argument('-rf','--regex-filter', help='Display only those entities that match the entered regular expression.', required=True)
+parser = argparse.ArgumentParser(description=' !!! DESCRIPTION GOES HERE !!! \n\nExample: \n    python rolepolicies.py -sf ec2 -af Desc.* -rf \* -ef Allow -pf ^Amazon', formatter_class=RawTextHelpFormatter)
+parser.add_argument('-sf','--serviceFilter', help='Regular expression filter for the Service column.', required=False)
+parser.add_argument('-af','--actionFilter', help='Regular expression filter for the Action column.', required=False)
+parser.add_argument('-rf','--resourceFilter', help='Regular expression filter for the Resource column.', required=False)
+parser.add_argument('-ef','--effectFilter', help='Regular expression filter for the Effect column.', required=False)
+parser.add_argument('-pf','--policynameFilter', help='Regular expression filter for the Policy name column.', required=False)
 args = vars(parser.parse_args())
 
 # Syslog handler
@@ -36,12 +41,9 @@ def policy_enumerate():
 
     for attached_policy in response1['AttachedPolicies']:
         role_policy1 = iamres.Policy(attached_policy['PolicyArn'])
-        #print('\n' + role_policy1.arn.split('/')[2])
 
         policy = iam.get_policy(PolicyArn=role_policy1.arn)
         policy_version = iam.get_policy_version(PolicyArn=role_policy1.arn, VersionId=policy['Policy']['DefaultVersionId'])
-        # policy_statement = policy_version['PolicyVersion']['Document']['Statement']
-        # print(json.dumps(policy_statement))
 
         values = []
 
@@ -54,9 +56,7 @@ def policy_enumerate():
 
     for policy_name in response2['PolicyNames']:
         role_policy2 = iamres.RolePolicy(role, policy_name)
-        # print('\n' + role_policy2.name)
         policy_statement = role_policy2.policy_document['Statement']
-        # print(policy_statement)
 
         values2 = []
 
@@ -77,59 +77,46 @@ def policy_enumerate():
     x.align["Policy name"] = "l"
 
     for value in values:
-        #print (str(value)+"\n")
-        value_parsed_json = ""
-        value_parsed_json = json.load(value)
-        if "Service" == str(args['regex-filter-type']):
-            if re.match(args['regex-filter'], value_parsed_json[0]):
-                x.add_row(value)
-        # Repeat the above logic for each column
-        #...
-        #...
-                #print(x)
+        if args['serviceFilter'] == None and args['actionFilter'] == None and args['resourceFilter'] == None and args['effectFilter'] == None and args['policynameFilter'] == None:
+            x.add_row(value)
+            continue
+        all_matched = True
+        value_list = str(value).replace("u'", "'")
+        value_list = ast.literal_eval(value_list)
+        try:
+            if not re.match(args['serviceFilter'], value_list[0]):
+                all_matched = False
+        except:
+            pass
+        try:
+            if not re.match(args['actionFilter'], value_list[1]):
+                all_matched = False
+        except:
+            pass
+        try:
+            if not re.match(args['resourceFilter'], value_list[2]):
+                all_matched = False
+        except:
+            pass
+        try:
+            if not re.match(args['effectFilter'], value_list[3]):
+                all_matched = False
+        except:
+            pass
+        try:
+            if not re.match(args['policynameFilter'], value_list[4]):
+                all_matched = False
+        except:
+            pass
 
+        if all_matched:
+            x.add_row(value)
 
-# def try_resources():
-#
-#     lambda_client = boto3.client('lambda', region_name='us-west-2')
-#
-#     try:
-#         print('\nPrinting the functions in Lambda:')
-#         print(lambda_client.list_functions())
-#     except Exception as e:
-#         print('Error: {}'.format(e))
-#
-#     role_arn_mod = ':'.join(role_arn.split(':')[:5]) + ':role/' + role_arn.split('/')[1]
-#
-#     with open('lambda.zip', 'rb') as f:
-#       zipped_code = f.read()
-#
-#     try:
-#         print('\nCreating a new function in Lambda:')
-#         lambda_client.create_function(
-#           FunctionName='myLambdaFunction',
-#           Runtime='python2.7',
-#           Role=role_arn_mod,
-#           Handler='main.handler',
-#           Code=dict(ZipFile=zipped_code)
-#         )
-#     except Exception as e:
-#         print('Error: {}'.format(e))
-#
-#     ec2 = boto3.resource('ec2', region_name='us-west-2')
-#     ami_ids = []
-#     for instance in ec2.instances.all():
-#         ami_ids.append(instance.image_id)
-#     try:
-#         ec2.create_instances(ImageId=ami_ids[1], MinCount=1, MaxCount=5)
-#     except Exception as e:
-#         print('Error: {}'.format(e))
+    print(x)
+
 
 if __name__ == '__main__':
     arn = ARN()
-    # services = arn.service.choices()
-
-
     iam = boto3.client('iam')
     iamres = boto3.resource('iam')
     r = requests.get('http://169.254.169.254/latest/meta-data/iam/info')
@@ -137,4 +124,3 @@ if __name__ == '__main__':
     role = role_arn.split('/')[1]
 
     policy_enumerate()
-    # try_resources()
