@@ -1,4 +1,3 @@
-from skew.arn import ARN
 import boto3
 import requests
 import json
@@ -35,6 +34,12 @@ logger.addHandler(syslog)
 
 
 def policy_enumerate():
+    iam = boto3.client('iam')
+    iamres = boto3.resource('iam')
+    r = requests.get('http://169.254.169.254/latest/meta-data/iam/info')
+    role_arn = json.loads(r.text)['InstanceProfileArn']
+    role = role_arn.split('/')[1]
+
     response1 = iam.list_attached_role_policies(RoleName=role)
     response2 = iam.list_role_policies(RoleName=role)
 
@@ -120,11 +125,5 @@ def policy_enumerate():
 
 
 if __name__ == '__main__':
-    arn = ARN()
-    iam = boto3.client('iam')
-    iamres = boto3.resource('iam')
-    r = requests.get('http://169.254.169.254/latest/meta-data/iam/info')
-    role_arn = json.loads(r.text)['InstanceProfileArn']
-    role = role_arn.split('/')[1]
 
     policy_enumerate()
