@@ -158,10 +158,10 @@ def print_table(values):
 
 def main():
     # If the config file cannot be loaded then boto3 will use its cached data because the global variables contain nonesens ("N/A")
-    config_parsing_was_successfull, region_name, aws_access_key_id, aws_secret_access_key, upload_endpoint_url, region_name_for_logs = load_config_json(
+    config_parsing_was_successful, region_name, aws_access_key_id, aws_secret_access_key, upload_endpoint_url, region_name_for_logs = load_config_json(
         "conf.json")
 
-    if not config_parsing_was_successfull:
+    if not config_parsing_was_successful:
         region_name = "N/A"
         aws_access_key_id = "N/A"
         aws_secret_access_key = "N/A"
