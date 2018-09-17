@@ -4,9 +4,13 @@ import requests
 import argparse
 import sys
 from argparse import RawTextHelpFormatter
+from prettytable import PrettyTable
+
 
 parser = argparse.ArgumentParser(description=' !!! DESCRIPTION GOES HERE !!! \n\nExample: \n    python lambda.py -f theNameOfTheFile', formatter_class=RawTextHelpFormatter)
 parser.add_argument('-f', '--fileName', help='The name of the file.', required=True)
+parser.add_argument('-func', '--functionName', help='The name you want to assign to the function you are uploading.', required=True)
+parser.add_argument('-r', '--runTime', help='The runtime environment for the Lambda function you are uploading.', required=True)
 args = vars(parser.parse_args())
 
 
@@ -44,8 +48,12 @@ def try_resources():
     role_arn = json.loads(r.text)['InstanceProfileArn']
 
     try:
-        print('\nPrinting the functions in Lambda:')
-        print(lambda_client.list_functions())
+        print('\nThe existing functions in Lambda:')
+        functions = lambda_client.list_functions()
+        values = []
+
+        for func in functions['Functions']:
+            values.append([func['FunctionName'], func['Runtime'], func['Description']])
     except Exception as e:
         print('Error: {}'.format(e))
 
@@ -60,8 +68,8 @@ def try_resources():
     try:
         print('\nCreating a new function in Lambda:')
         lambda_client.create_function(
-          FunctionName='myLambdaFunction',
-          Runtime='python2.7',
+          FunctionName=args['functionName'],
+          Runtime=args['runTime'],
           Role=role_arn_mod,
           Handler='main.handler',
           Code=dict(ZipFile=zipped_code)
@@ -69,6 +77,26 @@ def try_resources():
     except Exception as e:
         print('Error: {}'.format(e))
 
+    return values
+
+
+def print_table(values, fieldnames):
+    values.sort()
+    x = PrettyTable()
+    x.field_names = fieldnames
+    for field in fieldnames:
+        x.align[field] = "l"
+
+    for value in values:
+        x.add_row(value)
+
+    print(x)
+
+
+def main():
+    values = try_resources()
+    print_table(values, ['FunctionName', 'Runtime', 'Description'])
+
 
 if __name__ == '__main__':
-    try_resources()
+    main()
