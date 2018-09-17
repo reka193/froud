@@ -15,7 +15,7 @@ from logging import Formatter
 
 
 parser = argparse.ArgumentParser(description=' !!! DESCRIPTION GOES HERE !!! \n\nExample: \n    python cloudw.py -b nameOfMyBucket', formatter_class=RawTextHelpFormatter)
-parser.add_argument('-b','--bucketName', help='Specify the name of the bucket.', required=False)
+parser.add_argument('-b', '--bucketName', help='Specify the name of the bucket.', required=False)
 args = vars(parser.parse_args())
 
 syslog = SysLogHandler(address='/dev/log')
@@ -25,7 +25,6 @@ syslog.setFormatter(Formatter('[%(asctime)s] p%(process)s {%(pathname)s:%(lineno
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(syslog)
-
 
 
 def load_config_json(config_json_filename):
@@ -73,7 +72,6 @@ def load_config_json(config_json_filename):
     return True, region_name, aws_access_key_id, aws_secret_access_key, upload_endpoint_url, region_name_for_logs
 
 
-
 def list_and_save(logs):
     try:
 
@@ -81,7 +79,7 @@ def list_and_save(logs):
         values = []
         filenames = []
 
-        hours_ago = datetime.datetime.utcnow() - datetime.timedelta(hours=1200)
+        hours_ago = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
         start_time = int(hours_ago.strftime("%s")) * 1000
         stop_time = int(datetime.datetime.utcnow().strftime("%s")) * 1000
 
@@ -158,10 +156,10 @@ def print_table(values):
     print(x)
 
 
-if __name__ == '__main__':
-
+def main():
     # If the config file cannot be loaded then boto3 will use its cached data because the global variables contain nonesens ("N/A")
-    config_parsing_was_successfull, region_name, aws_access_key_id, aws_secret_access_key, upload_endpoint_url, region_name_for_logs  = load_config_json("conf.json")
+    config_parsing_was_successfull, region_name, aws_access_key_id, aws_secret_access_key, upload_endpoint_url, region_name_for_logs = load_config_json(
+        "conf.json")
 
     if not config_parsing_was_successfull:
         region_name = "N/A"
@@ -191,13 +189,19 @@ if __name__ == '__main__':
     try:
         session = boto3.Session()
         s3_client = session.client('s3', region_name=region_name, aws_access_key_id=aws_access_key_id or None,
-                                   aws_secret_access_key=aws_secret_access_key or None, endpoint_url=upload_endpoint_url)
+                                   aws_secret_access_key=aws_secret_access_key or None,
+                                   endpoint_url=upload_endpoint_url)
 
         if args['bucketName']:
+            bucket_name = args['bucketName']
             print ("Bucketname provided. Files will be uploaded.")
-            #upload_files(s3_client, filenames, bucket_name)
+            upload_files(s3_client, filenames, bucket_name)
         else:
             print("Bucketname has not been provided. Files will not be uploaded.")
 
     except:
         print('Error while creating the S3 client.')
+
+
+if __name__ == '__main__':
+    main()
