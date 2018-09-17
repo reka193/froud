@@ -9,6 +9,7 @@ import sys
 
 parser = argparse.ArgumentParser(description=' !!! DESCRIPTION GOES HERE !!! \n\nExample: \n    python dynamo.py -t nameOfMyTable', formatter_class=RawTextHelpFormatter)
 parser.add_argument('-t', '--tableName', help='Specify the name of the table.', required=False)
+parser.add_argument('-b', '--bucketName', help='Specify the name of the bucket.', required=False)
 args = vars(parser.parse_args())
 
 
@@ -101,11 +102,20 @@ def upload_files(s3_client, filenames, bucket_name):
             print('File upload is not successful')
 
 
-if __name__ == '__main__':
+def main():
 
-    config_parsing_was_successfull, region_name_for_logs = load_config_json("conf.json")
+    # If the config file cannot be loaded then boto3 will use its cached data because the global variables contain nonesens ("N/A")
+    config_parsing_was_successful, region_name, aws_access_key_id, aws_secret_access_key, upload_endpoint_url, region_name_for_logs = load_config_json(
+        "conf.json")
 
-    if not config_parsing_was_successfull:
+    if not config_parsing_was_successful:
+        region_name = "N/A"
+        aws_access_key_id = "N/A"
+        aws_secret_access_key = "N/A"
+        upload_endpoint_url = "N/A"
+        region_name_for_logs = "N/A"
+
+    if not config_parsing_was_successful:
         region_name_for_logs = "N/A"
 
     if args['tableName']:
@@ -115,3 +125,20 @@ if __name__ == '__main__':
     else:
         print ("Please specify a table name.")
 
+    try:
+        session = boto3.Session()
+        s3_client = session.client('s3', region_name=region_name, aws_access_key_id=aws_access_key_id or None,
+                                   aws_secret_access_key=aws_secret_access_key or None,
+                                   endpoint_url=upload_endpoint_url)
+    except:
+        print('S3 client could not be created.')
+    if args['bucketName']:
+        bucket_name = args['bucketName']
+        print ("Bucketname provided. Files will be uploaded.")
+        upload_files(s3_client, filenames, bucket_name)
+    else:
+        print("Bucketname has not been provided. Files will not be uploaded.")
+
+
+if __name__ == '__main__':
+    main()
