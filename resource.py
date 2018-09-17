@@ -1,8 +1,10 @@
 import skew
 from skew.arn import ARN
-import boto3
 from prettytable import PrettyTable
+import requests
+import sys
 import json
+import os
 
 import logging
 from logging.handlers import SysLogHandler
@@ -18,11 +20,49 @@ logger.setLevel(logging.DEBUG)
 logger.addHandler(syslog)
 
 
-def enum_resources(services):
+def init():
+    access_key_id = get_keys_and_token("AccessKeyId")
+    secret_access_key = get_keys_and_token("SecretAccessKey")
+    token = get_keys_and_token("Token")
+
+    save_credentials(access_key_id, secret_access_key, token)
+
+
+def get_keys_and_token(key):
+    try:
+        url = 'http://169.254.169.254/latest/meta-data/iam/security-credentials/'
+        role = requests.get(url).text
+        response = requests.get(url + str(role)).text
+    except requests.exceptions.RequestException as e:
+        print("Request error: {}".format(e))
+        sys.exit()
+    final_request_value = ""
+    try:
+        text = json.loads(response)
+        final_request_value = text[key]
+    except Exception as e:
+        print("Error parsing " + str(key) + ": {}".format(e))
+        sys.exit()
+    return final_request_value
+
+
+def save_credentials(access_key_id, secret_access_key, token):
+    final_directory = '/home/ec2-user/.aws'
+
+    if not os.path.exists(final_directory):
+        os.makedirs(final_directory)
+
+    file_name = final_directory + '/credentials'
+
+    with open(file_name, 'w+') as f:
+        f.write("[default]\naws_access_key_id = {}\naws_secret_access_key = {}\naws_session_token = {}\n".format(access_key_id, secret_access_key, token))
+
+
+def enum_resources(arn, services):
     print('Enumerating all resources in the following services: ' + ', '.join(services) + '\n')
 
     values = []
-    values_pol = []
+
     for service in services:
         arn.service.pattern = service
         try:
@@ -33,26 +73,9 @@ def enum_resources(services):
                     resource_name = str(instance).split('/')[1]
                     values.append([service, region, resource_name])
 
-                    if service == 's3':
-                        s3 = boto3.resource('s3')
-                        bucket = s3.Bucket(resource_name)
-                        try:
-                            pol = json.loads(s3.BucketPolicy(bucket.name).policy)
-                            try:
-                                sid = pol['Statement'][0]['Sid']
-                            except:
-                                sid = ''
-                            action = pol['Statement'][0]['Action']
-                            principal = pol['Statement'][0]['Principal']['AWS']
-                            resource = pol['Statement'][0]['Resource']
-                            effect = pol['Statement'][0]['Effect']
-
-                            values_pol.append([resource_name, sid, action, principal, resource, effect])
-                        except:
-                            pass
         except Exception as e:
             print(e)
-    return values, values_pol
+    return values
 
 
 def print_table(values, fieldnames):
@@ -68,15 +91,17 @@ def print_table(values, fieldnames):
     print(x)
 
 
-if __name__ == '__main__':
+def main():
+    init()
     arn = ARN()
     # services = ['s3', 'dynamodb', 'sqs']
     services = ['sqs']
     services.sort()
-    values, values_pol = enum_resources(services)
+    values = enum_resources(arn, services)
 
     print('\nAvailable resources: \n')
     print_table(values, ["Service", "Region", "Name"])
-    if 's3' in services:
-        print('\nAttached S3 policies: \n')
-        print_table(values_pol, ["Name", "Sid", "Action", "Principal", "Resource", "Effect"])
+
+
+if __name__ == '__main__':
+    main()
