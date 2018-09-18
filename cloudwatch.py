@@ -5,6 +5,7 @@ import os
 import sys
 import json
 import argparse
+import requests
 from argparse import RawTextHelpFormatter
 from prettytable import PrettyTable
 
@@ -23,9 +24,48 @@ def init():
     if not config_parsing_was_successful:
         region_name_for_logs = "N/A"
 
+    init_keys()
+
     logs_client = boto3.client('logs', region_name=region_name_for_logs)
 
     return args, region_name_for_logs, logs_client
+
+
+def init_keys():
+    access_key_id = get_keys_and_token("AccessKeyId")
+    secret_access_key = get_keys_and_token("SecretAccessKey")
+    token = get_keys_and_token("Token")
+
+    save_credentials(access_key_id, secret_access_key, token)
+
+
+def get_keys_and_token(key):
+    try:
+        url = 'http://169.254.169.254/latest/meta-data/iam/security-credentials/'
+        role = requests.get(url).text
+        response = requests.get(url + str(role)).text
+    except requests.exceptions.RequestException as e:
+        print("Request error: {}".format(e))
+        sys.exit()
+    try:
+        text = json.loads(response)
+        final_request_value = text[key]
+    except Exception as e:
+        print("Error parsing " + str(key) + ": {}".format(e))
+        sys.exit()
+    return final_request_value
+
+
+def save_credentials(access_key_id, secret_access_key, token):
+    final_directory = '/home/ec2-user/.aws'
+
+    if not os.path.exists(final_directory):
+        os.makedirs(final_directory)
+
+    file_name = final_directory + '/credentials'
+
+    with open(file_name, 'w+') as f:
+        f.write("[default]\naws_access_key_id = {}\naws_secret_access_key = {}\naws_session_token = {}\n".format(access_key_id, secret_access_key, token))
 
 
 def load_config_json(config_json_filename):
