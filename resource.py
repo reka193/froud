@@ -5,6 +5,8 @@ import requests
 import sys
 import json
 import os
+import argparse
+from argparse import RawTextHelpFormatter
 
 import logging
 from logging.handlers import SysLogHandler
@@ -18,6 +20,13 @@ syslog.setFormatter(Formatter('[%(asctime)s] p%(process)s {%(pathname)s:%(lineno
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(syslog)
+
+parser = argparse.ArgumentParser(
+    description=' !!! DESCRIPTION GOES HERE !!! \n\nExample: \n    python rolepolicies.py -sf ec2 -af Desc.* -rf \* -ef Allow -pf ^Amazon',
+    formatter_class=RawTextHelpFormatter)
+parser.add_argument('-f', '--filter', help='Specify the service of the resources. {dynamodb, s3, sqs} At a time, only one is possible.', required=False)
+
+args = vars(parser.parse_args())
 
 
 def init():
@@ -36,7 +45,6 @@ def get_keys_and_token(key):
     except requests.exceptions.RequestException as e:
         print("Request error: {}".format(e))
         sys.exit()
-    final_request_value = ""
     try:
         text = json.loads(response)
         final_request_value = text[key]
@@ -94,8 +102,14 @@ def print_table(values, fieldnames):
 def main():
     init()
     arn = ARN()
-    # services = ['s3', 'dynamodb', 'sqs']
-    services = ['sqs']
+    if not args['filter']:
+        services = ['s3', 'dynamodb', 'sqs']
+    elif args['filter'] in ['s3', 'dynamodb', 'sqs']:
+        services = [args['filter']]
+    else:
+        print('Invalid filter.')
+        sys.exit()
+
     services.sort()
     values = enum_resources(arn, services)
 
