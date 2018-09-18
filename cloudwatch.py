@@ -77,7 +77,7 @@ def list_and_save(logs_client, args):
                 gr_st = re.sub('[^\w\s-]', '', gr_st)
 
                 current_directory = os.getcwd()
-                final_directory = os.path.join(current_directory, r'logs')
+                final_directory = os.path.join(current_directory, r'cw_logs')
                 if not os.path.exists(final_directory):
                     os.makedirs(final_directory)
 
@@ -95,7 +95,7 @@ def list_and_save(logs_client, args):
 
                 except Exception as e:
                     print('File is skipped: {}, due to: {}'.format(file_name, e))
-        print('Files downloaded to currentpath/cw_logs folder.')
+        print('Files downloaded to $currentpath/cw_logs folder.')
         values = set(values)
         return filenames, values
 
@@ -122,6 +122,7 @@ def upload_files(s3_client, filenames, bucket_name):
 
 def print_table(values):
     nums = range(len(values))
+    nums = [x + 1 for x in nums]
     values_to_print = [list(a) for a in zip(nums, values)]
 
     values_to_print.sort()
