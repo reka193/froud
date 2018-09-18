@@ -11,9 +11,18 @@ from prettytable import PrettyTable
 
 
 def init():
-    parser = argparse.ArgumentParser(description=' !!! DESCRIPTION GOES HERE !!! \n\nExample: \n    python cloudw.py -b nameOfMyBucket', formatter_class=RawTextHelpFormatter)
-    parser.add_argument('-b', '--bucketName', help='Specify the name of the bucket.', required=False)
-    parser.add_argument('-t', '--time', help='The logs will be read from x hours ago, until now. Please, specify x or the default value is 24 (1 day)', required=False)
+    parser = argparse.ArgumentParser(
+        description='[*] Cloudwatch log scanner.\n'
+                    '[*] The results are saved to $currentpath/cw_logs folder.\n'
+                    '[*] The logs are read for a specified number of hours until the current time. Default value: 24 hours.\n'
+                    '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
+                    'Example: \n    '
+                    'python cloudwatch.py -t <TimeInHours>\n    '
+                    'python cloudwatch.py -b <BucketName>',
+        formatter_class=RawTextHelpFormatter)
+    optional = parser.add_argument_group('optional arguments')
+    optional.add_argument('-b', '--bucketName', help='Specify the name of the bucket.', required=False)
+    optional.add_argument('-t', '--time', help='Specify the number of hours to read the logs until the current time. Default value: 24 hours.', required=False)
 
     args = vars(parser.parse_args())
 
