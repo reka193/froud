@@ -8,10 +8,6 @@ import argparse
 from argparse import RawTextHelpFormatter
 from prettytable import PrettyTable
 
-import logging
-from logging.handlers import SysLogHandler
-from logging import Formatter
-
 
 def init():
     parser = argparse.ArgumentParser(description=' !!! DESCRIPTION GOES HERE !!! \n\nExample: \n    python cloudw.py -b nameOfMyBucket', formatter_class=RawTextHelpFormatter)
@@ -19,14 +15,6 @@ def init():
     parser.add_argument('-t', '--time', help='The logs will be read from x hours ago, until now. Please, specify x or the default value is 24 (1 day)', required=False)
 
     args = vars(parser.parse_args())
-
-    syslog = SysLogHandler(address='/dev/log')
-    syslog.setLevel(logging.DEBUG)
-    syslog.setFormatter(Formatter('[%(asctime)s] p%(process)s {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
-                                  '%m-%d %H:%M:%S'))
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(syslog)
 
     # If the config file cannot be loaded then boto3 will use its cached data because the global variables contain nonesens ("N/A")
     config_parsing_was_successful, region_name_for_logs = load_config_json(
