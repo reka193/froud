@@ -7,10 +7,33 @@ import json
 import sys
 
 
-parser = argparse.ArgumentParser(description=' !!! DESCRIPTION GOES HERE !!! \n\nExample: \n    python dynamo.py -t nameOfMyTable', formatter_class=RawTextHelpFormatter)
-parser.add_argument('-t', '--tableName', help='Specify the name of the table.', required=False)
-parser.add_argument('-b', '--bucketName', help='Specify the name of the bucket.', required=False)
-args = vars(parser.parse_args())
+def init():
+    parser = argparse.ArgumentParser(
+        description='[*] Scanner for DynamoDB tables.\n'
+                    '[*] The results are saved to $currentpath/dynamodb_scan folder.\n'
+                    '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
+                    'Example: \n    '
+                    'python dynamo.py -t <TableName>\n    '
+                    'python dynamo.py -t <TableName> -b <BucketName>',
+        formatter_class=RawTextHelpFormatter)
+    required = parser.add_argument_group('required arguments')
+    required.add_argument('-t', '--tableName', help='Specify the name of the table.', required=True)
+    optional = parser.add_argument_group('optional arguments')
+    optional.add_argument('-b', '--bucketName', help='Specify the name of the bucket.', required=False)
+
+    args = vars(parser.parse_args())
+
+    # If the config file cannot be loaded then boto3 will use its cached data because the global variables
+    # contain nonesens ("N/A")
+    config_parsing_was_successful, region_name_for_logs = load_config_json("conf.json")
+
+    if not config_parsing_was_successful:
+        region_name_for_logs = "N/A"
+
+    session = boto3.Session()
+    s3_client = session.client('s3')
+
+    return args, region_name_for_logs, s3_client
 
 
 def load_config_json(config_json_filename):
@@ -43,7 +66,7 @@ def scan_table(table, region_name_for_logs):
     except ClientError as ce:
         if ce.response['Error']['Code'] == 'ResourceNotFoundException':
             print('Requested table not found.')
-            sys.exit()
+        sys.exit()
 
     print('Scanning the table...')
     data = response['Items']
@@ -59,7 +82,7 @@ def write_to_file(table, data):
 
     print('Writing files to currentpath/scan_results folder...')
     current_directory = os.getcwd()
-    final_directory = os.path.join(current_directory, r'scan_results')
+    final_directory = os.path.join(current_directory, r'dynamodb_scan')
     if not os.path.exists(final_directory):
         os.makedirs(final_directory)
 
@@ -73,7 +96,7 @@ def write_to_file(table, data):
             filenames.append(file_name)
             with open(file_name, 'w+') as f:
                 for line in data:
-                    f.write(str(line))
+                    f.write(json.dumps(line))
                 del data[:]
 
         else:
@@ -81,9 +104,11 @@ def write_to_file(table, data):
             filenames.append(file_name)
             with open(file_name, 'w+') as f:
                 for line in data[:1000]:
-                    f.write(str(line))
+                    f.write(json.dumps(line))
                 del data[:1000]
         count += 1000
+
+    print('Files can be found in currentpath/dynamodb_scan folder.')
 
     return filenames
 
@@ -91,53 +116,37 @@ def write_to_file(table, data):
 def upload_files(s3_client, filenames, bucket_name):
 
     print('Uploading files...')
-    for file in filenames:
+    for f in filenames:
         try:
-            key = file.split('/')[-2:]
+            key = f.split('/')[-2:]
             key = key[0] + '/' + key[1]
             tc = boto3.s3.transfer.TransferConfig()
             t = boto3.s3.transfer.S3Transfer(client=s3_client, config=tc)
-            t.upload_file(file, bucket_name, key)
+            t.upload_file(f, bucket_name, key)
         except:
             print('File upload is not successful')
 
 
 def main():
 
-    # If the config file cannot be loaded then boto3 will use its cached data because the global variables contain nonesens ("N/A")
-    config_parsing_was_successful, region_name, aws_access_key_id, aws_secret_access_key, upload_endpoint_url, region_name_for_logs = load_config_json(
-        "conf.json")
-
-    if not config_parsing_was_successful:
-        region_name = "N/A"
-        aws_access_key_id = "N/A"
-        aws_secret_access_key = "N/A"
-        upload_endpoint_url = "N/A"
-        region_name_for_logs = "N/A"
-
-    if not config_parsing_was_successful:
-        region_name_for_logs = "N/A"
+    args, region_name_for_logs, s3_client = init()
 
     if args['tableName']:
         table = str(args['tableName'])
-        data = scan_table(table, region_name_for_logs)
-        filenames = write_to_file(table, data)
     else:
         print ("Please specify a table name.")
+        sys.exit()
 
-    try:
-        session = boto3.Session()
-        s3_client = session.client('s3', region_name=region_name, aws_access_key_id=aws_access_key_id or None,
-                                   aws_secret_access_key=aws_secret_access_key or None,
-                                   endpoint_url=upload_endpoint_url)
-    except:
-        print('S3 client could not be created.')
+    data = scan_table(table, region_name_for_logs)
+    filenames = write_to_file(table, data)
+
     if args['bucketName']:
         bucket_name = args['bucketName']
-        print ("Bucketname provided. Files will be uploaded.")
-        upload_files(s3_client, filenames, bucket_name)
-    else:
-        print("Bucketname has not been provided. Files will not be uploaded.")
+        try:
+            upload_files(s3_client, filenames, bucket_name)
+            print ("Files are uploaded to the given bucket.")
+        except Exception as e:
+            print(e)
 
 
 if __name__ == '__main__':
