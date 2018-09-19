@@ -8,30 +8,23 @@ import os
 import argparse
 from argparse import RawTextHelpFormatter
 
-import logging
-from logging.handlers import SysLogHandler
-from logging import Formatter
-
-# Syslog handler
-syslog = SysLogHandler(address='/dev/log')
-syslog.setLevel(logging.DEBUG)
-syslog.setFormatter(Formatter('[%(asctime)s] p%(process)s {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
-                              '%m-%d %H:%M:%S'))
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-logger.addHandler(syslog)
-
-parser = argparse.ArgumentParser(
-    description='[*] List of available services.\n'
-                '[*] The results can be filtered by the name of the service. Default value: [dynamodb, s3, sqs]'
-                '\n\nusage: \n    python resource.py -s <ServiceName>',
-    formatter_class=RawTextHelpFormatter)
-parser.add_argument('-s', '--service', help='Filter the type of services by choosing from {dynamodb, s3, sqs}. At a time, only one service can be used for filtering.', required=False)
-
-args = vars(parser.parse_args())
-
 
 def init():
+    init_keys()
+    
+    parser = argparse.ArgumentParser(
+        description='[*] List of available services.\n'
+                    '[*] The results can be filtered by the name of the service. Default value: [dynamodb, s3, sqs]'
+                    '\n\nusage: \n    python resource.py -s <ServiceName>',
+        formatter_class=RawTextHelpFormatter)
+    parser.add_argument('-s', '--service', help='Filter the type of services by choosing from {dynamodb, s3, sqs}. At a time, only one service can be used for filtering.', required=False)
+    
+    args = vars(parser.parse_args())
+    
+    return args
+
+
+def init_keys():
     access_key_id = get_keys_and_token("AccessKeyId")
     secret_access_key = get_keys_and_token("SecretAccessKey")
     token = get_keys_and_token("Token")
@@ -103,7 +96,7 @@ def print_table(values, fieldnames):
 
 
 def main():
-    init()
+    args = init()
     arn = ARN()
     if not args['service']:
         services = ['s3', 'dynamodb', 'sqs']
