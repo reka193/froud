@@ -6,6 +6,8 @@ import json
 import os
 import sys
 import requests
+from argparse import RawTextHelpFormatter
+import argparse
 
 import logging
 from logging.handlers import SysLogHandler
@@ -22,6 +24,22 @@ logger.addHandler(syslog)
 
 
 def init():
+    parser = argparse.ArgumentParser(
+            description='[*] S3 policy enumerator.\n'
+                        '[*] Returned policy attributes:\n'
+                        '   [+] Name: The name of the policy.\n'
+                        '   [+] Sid: The Sid (statement ID) is an optional identifier for the policy statement.\n'
+                        '   [+] Action: Describes the specific action(s) that will be allowed or denied.\n'
+                        '   [+] Principal: Specifies the entity that is allowed or denied access to a resource.\n'
+                        '   [+] Resource: Specifies the object or objects that the statement covers.\n'
+                        '   [+] Effect: Specifies whether the statement results in an allow or an explicit deny',
+            formatter_class=RawTextHelpFormatter)
+
+    args = parser.parse_args()
+    return args
+
+
+def init_keys():
     access_key_id = get_keys_and_token("AccessKeyId")
     secret_access_key = get_keys_and_token("SecretAccessKey")
     token = get_keys_and_token("Token")
@@ -37,7 +55,6 @@ def get_keys_and_token(key):
     except requests.exceptions.RequestException as e:
         print("Request error: {}".format(e))
         sys.exit()
-    final_request_value = ""
     try:
         text = json.loads(response)
         final_request_value = text[key]
@@ -60,10 +77,9 @@ def save_credentials(access_key_id, secret_access_key, token):
 
 
 def enum_resources(arn, services):
-    print('Enumerating all policies belonging to resources in the following services: ' + ', '.join(services) + '\n')
+    print('Enumerating s3 policies...' + '\n')
 
     values_pol = []
-    values_pol2 = []
     for service in services:
         arn.service.pattern = service
         try:
@@ -73,34 +89,25 @@ def enum_resources(arn, services):
                     region = str(instance).split(':')[3]
                     resource_name = str(instance).split('/')[1]
 
-                    if service == 's3':
-                        s3 = boto3.resource('s3')
-                        bucket = s3.Bucket(resource_name)
-                        try:
-                            pol = json.loads(s3.BucketPolicy(bucket.name).policy)
-                            try:
-                                sid = pol['Statement'][0]['Sid']
-                            except:
-                                sid = ''
-                            action = pol['Statement'][0]['Action']
-                            principal = pol['Statement'][0]['Principal']['AWS']
-                            resource = pol['Statement'][0]['Resource']
-                            effect = pol['Statement'][0]['Effect']
-
-                            values_pol.append([resource_name, sid, action, principal])
-                            values_pol2.append([resource_name, resource, effect])
-                        except:
-                            pass
+                    s3 = boto3.resource('s3')
+                    bucket = s3.Bucket(resource_name)
+                    try:
+                        pol = json.loads(s3.BucketPolicy(bucket.name).policy)
+                        values_pol.append(json.dumps(pol['Statement'][0], indent=4, sort_keys=True))
+                    except:
+                        pass
         except Exception as e:
             print(e)
-    return values_pol, values_pol2
+    return values_pol
 
 
 def print_table(values, fieldnames):
 
+    nums = range(len(values))
+
     values.sort()
-    for num in range(len(values)):
-        values[num].insert(0, num)
+    for num in nums:
+        values[num].insert(0, num+1)
 
     x = PrettyTable()
     x.field_names = fieldnames
@@ -117,15 +124,19 @@ def print_table(values, fieldnames):
 def main():
     init()
     arn = ARN()
-    # services = ['s3', 'dynamodb', 'sqs']
     services = ['s3']
     services.sort()
-    values_pol, values_pol2 = enum_resources(arn, services)
+    values_pol = enum_resources(arn, services)
 
-    if 's3' in services:
-        print('\nAttached S3 policies: \n')
-        print_table(values_pol, ["No.", "Name", "Sid", "Action", "Principal"])
-        print_table(values_pol2, ["No.", "Name", "Resource", "Effect"])
+    print('\nAttached S3 policies: \n')
+
+    # for sublst in values_pol:
+    #     print(" | ".join(str(bit) for bit in sublst))
+
+    for item in values_pol:
+        print(item)
+    #print_table(values_pol, ["No.", "Name", "Sid", "Action", "Principal", "Resource", "Effect"])
+    #print_table(values_pol2, ["No.", "Name", "Resource", "Effect"])
 
 
 if __name__ == '__main__':
