@@ -16,7 +16,7 @@ def init():
                     '[*] The results are saved to $currentpath/cw_logs folder.\n'
                     '[*] The logs are read for a specified number of hours until the current time. Default value: 24 hours.\n'
                     '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
-                    'Example: \n    '
+                    'usage: \n    '
                     'python cloudwatch.py -t <TimeInHours>\n    '
                     'python cloudwatch.py -b <BucketName>',
         formatter_class=RawTextHelpFormatter)
