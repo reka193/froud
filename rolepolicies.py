@@ -134,6 +134,10 @@ def policy_enumerate(args):
             match = False
         if match and args['policyname'] and re.match(args['policyname'], value[4]):
             values_to_print.append(value)
+            match = False
+
+    if match:
+        values_to_print = values
 
     print_table(values_to_print, ["Service", "Action", "Resource", "Effect", "Policy name"])
 
