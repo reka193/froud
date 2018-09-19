@@ -3,16 +3,14 @@ import requests
 import json
 from prettytable import PrettyTable
 import argparse
-import ast
+import os
 from argparse import RawTextHelpFormatter
-
-import logging
-from logging.handlers import SysLogHandler
-from logging import Formatter
 import re
 
 
 def init():
+    init_keys()
+
     parser = argparse.ArgumentParser(
         description='[*] List of policies attached to the role of the current user.\n'
                     '[*] The results can be filtered by any of the returned attributes using regular expressions.\n'
@@ -34,6 +32,44 @@ def init():
     args = vars(parser.parse_args())
 
     return args
+
+
+def init_keys():
+    access_key_id = get_keys_and_token("AccessKeyId")
+    secret_access_key = get_keys_and_token("SecretAccessKey")
+    token = get_keys_and_token("Token")
+
+    save_credentials(access_key_id, secret_access_key, token)
+
+
+def get_keys_and_token(key):
+    try:
+        url = 'http://169.254.169.254/latest/meta-data/iam/security-credentials/'
+        role = requests.get(url).text
+        response = requests.get(url + str(role)).text
+    except requests.exceptions.RequestException as e:
+        print("Request error: {}".format(e))
+        sys.exit()
+    try:
+        text = json.loads(response)
+        final_request_value = text[key]
+    except Exception as e:
+        print("Error parsing " + str(key) + ": {}".format(e))
+        sys.exit()
+    return final_request_value
+
+
+def save_credentials(access_key_id, secret_access_key, token):
+    final_directory = '/home/ec2-user/.aws'
+
+    if not os.path.exists(final_directory):
+        os.makedirs(final_directory)
+
+    file_name = final_directory + '/credentials'
+
+    with open(file_name, 'w+') as f:
+        f.write("[default]\naws_access_key_id = {}\naws_secret_access_key = {}\naws_session_token = {}\n".format(access_key_id, secret_access_key, token))
+
 
 
 def policy_enumerate(args):
@@ -78,51 +114,40 @@ def policy_enumerate(args):
                 values2.append([action.split(':')[0], action.split(':')[1], resource, effect, role_policy2.name])
 
     values = values + values2
-    values.sort()
 
-    x = PrettyTable()
-
-    x.field_names = ["Service", "Action", "Resource", "Effect", "Policy name"]
-    x.align["Service"] = "l"
-    x.align["Action"] = "l"
-    x.align["Policy name"] = "l"
+    values_to_print = []
 
     for value in values:
-        if args['service'] is None and args['action'] is None and args['resource'] is None and \
-                args['effect'] is None and args['policyname'] is None:
-            x.add_row(value)
-            continue
-        all_matched = True
-        value_list = str(value).replace("u'", "'")
-        value_list = ast.literal_eval(value_list)
-        try:
-            if not re.match(args['service'], value_list[0]):
-                all_matched = False
-        except:
-            pass
-        try:
-            if not re.match(args['action'], value_list[1]):
-                all_matched = False
-        except:
-            pass
-        try:
-            if not re.match(args['resource'], value_list[2]):
-                all_matched = False
-        except:
-            pass
-        try:
-            if not re.match(args['effect'], value_list[3]):
-                all_matched = False
-        except:
-            pass
-        try:
-            if not re.match(args['policyname'], value_list[4]):
-                all_matched = False
-        except:
-            pass
+        match = True
 
-        if all_matched:
-            x.add_row(value)
+        if args['service'] and re.match(args['service'], value[0]):
+            values_to_print.append(value)
+            match = False
+        if match and args['action'] and re.match(args['action'], value[1]):
+            values_to_print.append(value)
+            match = False
+        if match and args['resource'] and re.match(args['resource'], value[2]):
+            values_to_print.append(value)
+            match = False
+        if match and args['effect'] and re.match(args['effect'], value[3]):
+            values_to_print.append(value)
+            match = False
+        if match and args['policyname'] and re.match(args['policyname'], value[4]):
+            values_to_print.append(value)
+
+    print_table(values_to_print, ["Service", "Action", "Resource", "Effect", "Policy name"])
+
+
+def print_table(values, fieldnames):
+    values.sort()
+    x = PrettyTable()
+    x.field_names = fieldnames
+
+    for field in fieldnames:
+        x.align[field] = "l"
+
+    for value in values:
+        x.add_row(value)
 
     print(x)
 
