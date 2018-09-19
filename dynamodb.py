@@ -12,7 +12,7 @@ def init():
         description='[*] Scanner for DynamoDB tables.\n'
                     '[*] The results are saved to $currentpath/dynamodb_scan folder.\n'
                     '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
-                    'Example: \n    '
+                    'usage: \n    '
                     'python dynamo.py -t <TableName>\n    '
                     'python dynamo.py -t <TableName> -b <BucketName>',
         formatter_class=RawTextHelpFormatter)
