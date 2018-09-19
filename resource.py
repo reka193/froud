@@ -22,9 +22,11 @@ logger.setLevel(logging.DEBUG)
 logger.addHandler(syslog)
 
 parser = argparse.ArgumentParser(
-    description=' !!! DESCRIPTION GOES HERE !!! \n\nExample: \n    python rolepolicies.py -sf ec2 -af Desc.* -rf \* -ef Allow -pf ^Amazon',
+    description='[*] List of available services.\n'
+                '[*] The results can be filtered by the name of the service. Default value: [dynamodb, s3, sqs]'
+                '\n\nusage: \n    python resource.py -s <ServiceName>',
     formatter_class=RawTextHelpFormatter)
-parser.add_argument('-f', '--filter', help='Specify the service of the resources. {dynamodb, s3, sqs} At a time, only one is possible.', required=False)
+parser.add_argument('-s', '--service', help='Filter the type of services by choosing from {dynamodb, s3, sqs}. At a time, only one service can be used for filtering.', required=False)
 
 args = vars(parser.parse_args())
 
@@ -90,6 +92,7 @@ def print_table(values, fieldnames):
     values.sort()
     x = PrettyTable()
     x.field_names = fieldnames
+
     for field in fieldnames:
         x.align[field] = "l"
 
@@ -102,12 +105,12 @@ def print_table(values, fieldnames):
 def main():
     init()
     arn = ARN()
-    if not args['filter']:
+    if not args['service']:
         services = ['s3', 'dynamodb', 'sqs']
-    elif args['filter'] in ['s3', 'dynamodb', 'sqs']:
-        services = [args['filter']]
+    elif args['service'] in ['s3', 'dynamodb', 'sqs']:
+        services = [args['service']]
     else:
-        print('Invalid filter.')
+        print('Invalid service.')
         sys.exit()
 
     services.sort()
