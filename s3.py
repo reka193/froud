@@ -1,54 +1,25 @@
 import boto3
-from botocore.exceptions import ClientError
 from prettytable import PrettyTable
 import argparse
 from argparse import RawTextHelpFormatter
-import sys
 
-parser = argparse.ArgumentParser(description=' !!! DESCRIPTION GOES HERE !!! \n\nExample: \n    python s3.py -b theNameOfTheBucket', formatter_class=RawTextHelpFormatter)
-parser.add_argument('-b', '--bucketName', help='The name of the bucket.', required=True)
-args = vars(parser.parse_args())
+parser = argparse.ArgumentParser(description='[*] File upload to S3.\n'
+                                             '[*] Specify the name of the file you are uploading and the destination bucket.\n'
+                                             '[*] The key of the object can be set, but not required. Default value: the name of the file.'
+                                             '\n\nusage: \n    python s3.py -b <BucketName> -f <FileName>\n'
+                                             '    python s3.py -b <BucketName> -f <FileName> -k <Key>', formatter_class=RawTextHelpFormatter)
 
 
-def list_grants(s3, bucket_name):
+def init():
+    required = parser.add_argument_group('required arguments')
+    required.add_argument('-b', '--bucketName', help='The name of the bucket.', required=True)
+    required.add_argument('-f', '--fileName', help='The name of the file to upload.', required=True)
+    optional = parser.add_argument_group('optional arguments')
+    optional.add_argument('-k', '--key', help='The key of the object in the bucket. Default value: fileName',
+                          required=False)
 
-    try:
-        objects = s3.list_objects_v2(Bucket=bucket_name)
-        print('Collecting objects and the ACL...\n')
-        print('The number of objects in the bucket: {}\n'.format(len(objects)))
-    except ClientError as ce:
-        if ce.response['Error']['Code'] == 'InvalidBucketName':
-            print('The specified bucket is not valid.')
-        if ce.response['Error']['Code'] == 'AccessDenied':
-            print('\nNo permission to get list objects.')
-        sys.exit()
-    try:
-        bucket_acl = s3.get_bucket_acl(Bucket=bucket_name)
-    except ClientError as ce:
-        if ce.response['Error']['Code'] == 'InvalidBucketName':
-            print('The specified bucket is not valid.')
-        if ce.response['Error']['Code'] == 'AccessDenied':
-            print('\nNo permission to get bucket acl.')
-        sys.exit()
-
-    grants = bucket_acl['Grants']
-
-    values = []
-
-    for grant in grants:
-        grant_type = grant['Grantee']['Type']
-        grant_permission = grant['Permission']
-        values.append([grant_type, grant_permission])
-
-    print_table(values, ['Type', 'Permission'])
-
-    try:
-        for obj in objects['Contents']:
-            object_acl = s3.get_object_acl(Bucket=bucket_name, Key=obj['Key'])
-            print(object_acl)
-    except ClientError as ce:
-        if ce.response['Error']['Code'] == 'AccessDenied':
-            print('\nNo permission to get object acl.')
+    args = vars(parser.parse_args())
+    return args
 
 
 def print_table(values, fieldnames):
@@ -64,20 +35,38 @@ def print_table(values, fieldnames):
     print(x)
 
 
-def make_bucket_public(s3, bucket_name):
+def upload_file(s3_client, file_name, bucket_name, args):
+
+    if args['key']:
+        key = args['key']
+    else:
+        key = file_name
+
+    print('Uploading files...')
+
     try:
-        s3.put_bucket_acl(
-            ACL='public-read',
-            Bucket=bucket_name,
-        )
-        print('The bucket has been made public.')
-    except ClientError as ce:
-        if ce.response['Error']['Code'] == 'AccessDenied':
-            print('\nNo permission to make the bucket public.')
+        tc = boto3.s3.transfer.TransferConfig()
+        t = boto3.s3.transfer.S3Transfer(client=s3_client, config=tc)
+        t.upload_file(file_name, bucket_name, key, extra_args={'ACL': 'public-read'})
+
+        file_url = 'https://{}.s3.amazonaws.com/{}'.format(bucket_name, key)
+        print('The uploaded file is public and accessible with the following url: {}'.format(file_url))
+    except Exception as e:
+        print('File upload is not successful: {}'.format(e))
+
+
+def main():
+    args = init()
+    bucket_name = args['bucketName']
+    s3 = boto3.client('s3')
+
+    if args['fileName']:
+        file_name = args['fileName']
+    else:
+        print('Filename not specified or invalid filename.')
+
+    upload_file(s3, file_name, bucket_name, args)
 
 
 if __name__ == '__main__':
-    bucket_name = args['bucketName']
-    s3 = boto3.client('s3')
-    list_grants(s3, bucket_name)
-    make_bucket_public(s3, bucket_name)
+    main()
