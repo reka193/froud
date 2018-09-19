@@ -11,29 +11,32 @@ from logging.handlers import SysLogHandler
 from logging import Formatter
 import re
 
-parser = argparse.ArgumentParser(
-    description=' !!! DESCRIPTION GOES HERE !!! \n\nExample: \n    python rolepolicies.py -sf ec2 -af Desc.* -rf \* -ef Allow -pf ^Amazon',
-    formatter_class=RawTextHelpFormatter)
-parser.add_argument('-sf', '--serviceFilter', help='Regular expression filter for the Service column.', required=False)
-parser.add_argument('-af', '--actionFilter', help='Regular expression filter for the Action column.', required=False)
-parser.add_argument('-rf', '--resourceFilter', help='Regular expression filter for the Resource column.',
-                    required=False)
-parser.add_argument('-ef', '--effectFilter', help='Regular expression filter for the Effect column.', required=False)
-parser.add_argument('-pf', '--policynameFilter', help='Regular expression filter for the Policy name column.',
-                    required=False)
-args = vars(parser.parse_args())
 
-# Syslog handler
-syslog = SysLogHandler(address='/dev/log')
-syslog.setLevel(logging.DEBUG)
-syslog.setFormatter(Formatter('[%(asctime)s] p%(process)s {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
-                              '%m-%d %H:%M:%S'))
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-logger.addHandler(syslog)
+def init():
+    parser = argparse.ArgumentParser(
+        description='[*] List of policies attached to the role of the current user.\n'
+                    '[*] The results can be filtered by any of the returned attributes using regular expressions.\n'
+                    '[*] Returned policy attributes:\n'
+                    '   [+] Service: The name of the service.\n'
+                    '   [+] Action: Describes the specific action(s) that will be allowed or denied.\n'
+                    '   [+] Resource: Specifies the object or objects that the statement covers.\n'
+                    '   [+] Effect: Specifies whether the statement results in an allow or an explicit deny.\n'
+                    '   [+] Policy name: The name of the AWS managed or inline policy.'
+                    ' \n\nExample: \n    python rolepolicies.py -s ec2 -a Desc.* -r \* -e Allow -p ^Amazon',
+        formatter_class=RawTextHelpFormatter)
+    parser.add_argument('-s', '--service', help='Regular expression filter for the Service column.', required=False)
+    parser.add_argument('-a', '--action', help='Regular expression filter for the Action column.', required=False)
+    parser.add_argument('-r', '--resource', help='Regular expression filter for the Resource column.',
+                        required=False)
+    parser.add_argument('-e', '--effect', help='Regular expression filter for the Effect column.', required=False)
+    parser.add_argument('-p', '--policyname', help='Regular expression filter for the Policy name column.',
+                        required=False)
+    args = vars(parser.parse_args())
+
+    return args
 
 
-def policy_enumerate():
+def policy_enumerate(args):
     iam = boto3.client('iam')
     iamres = boto3.resource('iam')
     r = requests.get('http://169.254.169.254/latest/meta-data/iam/info')
@@ -85,35 +88,35 @@ def policy_enumerate():
     x.align["Policy name"] = "l"
 
     for value in values:
-        if args['serviceFilter'] is None and args['actionFilter'] is None and args['resourceFilter'] is None and \
-                args['effectFilter'] is None and args['policynameFilter'] is None:
+        if args['service'] is None and args['action'] is None and args['resource'] is None and \
+                args['effect'] is None and args['policyname'] is None:
             x.add_row(value)
             continue
         all_matched = True
         value_list = str(value).replace("u'", "'")
         value_list = ast.literal_eval(value_list)
         try:
-            if not re.match(args['serviceFilter'], value_list[0]):
+            if not re.match(args['service'], value_list[0]):
                 all_matched = False
         except:
             pass
         try:
-            if not re.match(args['actionFilter'], value_list[1]):
+            if not re.match(args['action'], value_list[1]):
                 all_matched = False
         except:
             pass
         try:
-            if not re.match(args['resourceFilter'], value_list[2]):
+            if not re.match(args['resource'], value_list[2]):
                 all_matched = False
         except:
             pass
         try:
-            if not re.match(args['effectFilter'], value_list[3]):
+            if not re.match(args['effect'], value_list[3]):
                 all_matched = False
         except:
             pass
         try:
-            if not re.match(args['policynameFilter'], value_list[4]):
+            if not re.match(args['policyname'], value_list[4]):
                 all_matched = False
         except:
             pass
@@ -126,4 +129,5 @@ def policy_enumerate():
 
 if __name__ == '__main__':
 
-    policy_enumerate()
+    args = init()
+    policy_enumerate(args)
