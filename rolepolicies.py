@@ -6,6 +6,7 @@ import argparse
 import os
 from argparse import RawTextHelpFormatter
 import re
+import sys
 
 
 def init():
@@ -69,7 +70,6 @@ def save_credentials(access_key_id, secret_access_key, token):
 
     with open(file_name, 'w+') as f:
         f.write("[default]\naws_access_key_id = {}\naws_secret_access_key = {}\naws_session_token = {}\n".format(access_key_id, secret_access_key, token))
-
 
 
 def policy_enumerate(args):
