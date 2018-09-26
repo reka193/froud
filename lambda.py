@@ -68,7 +68,7 @@ def list_functions(lambda_client):
     return values
 
 
-def create_function(lambda_client, role_arn):
+def create_run_function(lambda_client, role_arn):
 
     role_arn_mod = ':'.join(role_arn.split(':')[:5]) + ':role/' + role_arn.split('/')[1]
 
@@ -93,6 +93,12 @@ def create_function(lambda_client, role_arn):
             # print('Error: Could not unzip uploaded file. Please check your file, then try to upload again.')
             print(ce)
 
+    try:
+        lambda_client.invoke(FunctionName=args['functionName'])
+    except Exception as e:
+        print(e)
+
+
 
 def print_table(values, fieldnames):
     values.sort()
@@ -112,7 +118,7 @@ def main():
     values = list_functions(lambda_client)
     print('\nThe existing functions in Lambda:')
     print_table(values, ['FunctionName', 'Runtime', 'Description'])
-    create_function(lambda_client, role_arn)
+    create_run_function(lambda_client, role_arn)
 
 
 if __name__ == '__main__':
