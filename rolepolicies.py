@@ -13,7 +13,7 @@ def init():
     init_keys()
 
     parser = argparse.ArgumentParser(
-        description='[*] List of policies attached to the role of the current user.\n'
+        description='[*] List of policies attached to the role in the instance profile.\n'
                     '[*] The results can be filtered by any of the returned attributes using regular expressions.\n'
                     '[*] Returned policy attributes:\n'
                     '   [+] Service: The name of the service.\n'
