@@ -7,7 +7,7 @@
 "sqs_message":[
         {
             "timestamp":"#2018-08-01T10:57:36Z#",
-            "version":1,
+            "id":1,
             }
         }
     ]
