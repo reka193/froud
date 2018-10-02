@@ -84,6 +84,8 @@ def policy_enumerate(args):
 
     print('\nThe following permissions belong to the role {}: \n'.format(role))
 
+    values = []
+
     for attached_policy in response1['AttachedPolicies']:
         role_policy1 = iamres.Policy(attached_policy['PolicyArn'])
 
@@ -91,15 +93,18 @@ def policy_enumerate(args):
         policy_version = iam.get_policy_version(PolicyArn=role_policy1.arn,
                                                 VersionId=policy['Policy']['DefaultVersionId'])
 
-        values = []
-
         for statement in policy_version['PolicyVersion']['Document']['Statement']:
             resource = statement['Resource']
             effect = statement['Effect']
+            actions = statement['Action']
 
-            for action in statement['Action']:
+            if type(actions) is list:
+                for action in actions:
+                    values.append(
+                        [action.split(':')[0], action.split(':')[1], resource, effect, role_policy1.arn.split('/')[-1]])
+            else:
                 values.append(
-                    [action.split(':')[0], action.split(':')[1], resource, effect, role_policy1.arn.split('/')[2]])
+                    [actions.split(':')[0], actions.split(':')[1], resource, effect, role_policy1.arn.split('/')[-1]])
 
     for policy_name in response2['PolicyNames']:
         role_policy2 = iamres.RolePolicy(role, policy_name)
@@ -110,8 +115,13 @@ def policy_enumerate(args):
         for pol_stat in policy_statement:
             resource = pol_stat['Resource']
             effect = pol_stat['Effect']
-            for action in pol_stat['Action']:
-                values2.append([action.split(':')[0], action.split(':')[1], resource, effect, role_policy2.name])
+            actions = pol_stat['Action']
+
+            if type(actions) is list:
+                for action in actions:
+                    values2.append([action.split(':')[0], action.split(':')[1], resource, effect, role_policy2.name])
+            else:
+                values2.append([actions.split(':')[0], actions.split(':')[1], resource, effect, role_policy2.name])
 
     values = values + values2
 
@@ -123,7 +133,7 @@ def policy_enumerate(args):
         if args['service'] and re.match(args['service'], value[0]):
             values_to_print.append(value)
             match = False
-        if match and args['action'] and re.match(args['action'], value[1]):
+        if match and args['action'] and (re.match(args['action'], value[1]) or value[1] == '*'):
             values_to_print.append(value)
             match = False
         if match and args['resource'] and re.match(args['resource'], value[2]):
