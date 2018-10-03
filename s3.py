@@ -2,6 +2,7 @@ import boto3
 from prettytable import PrettyTable
 import argparse
 from argparse import RawTextHelpFormatter
+from boto3.exceptions import S3UploadFailedError
 
 parser = argparse.ArgumentParser(description='[*] File upload to S3.\n'
                                              '[*] Specify the name of the file you are uploading and the destination bucket.\n'
@@ -51,8 +52,9 @@ def upload_file(s3_client, file_name, bucket_name, args):
 
         file_url = 'https://{}.s3.amazonaws.com/{}'.format(bucket_name, key)
         print('The uploaded file is public and accessible with the following url: {}'.format(file_url))
-    except Exception as e:
-        print('File upload is not successful: {}'.format(e))
+    except S3UploadFailedError as ex:
+        if ex.response['Error']['Code'] == 'AccessDenied':
+            print('File upload is not successful: PutObject permission missing.')
 
 
 def main():
