@@ -52,8 +52,7 @@ def upload_file(s3_client, file_name, bucket_name, args):
 
         file_url = 'https://{}.s3.amazonaws.com/{}'.format(bucket_name, key)
         print('The uploaded file is public and accessible with the following url: {}'.format(file_url))
-    except S3UploadFailedError as ex:
-        if ex.response['Error']['Code'] == 'AccessDenied':
+    except S3UploadFailedError:
             print('File upload is not successful: PutObject permission missing.')
 
 
