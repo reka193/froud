@@ -21,7 +21,7 @@ def init():
                     '   [+] Resource: Specifies the object or objects that the statement covers.\n'
                     '   [+] Effect: Specifies whether the statement results in an allow or an explicit deny.\n'
                     '   [+] Policy name: The name of the AWS managed or inline policy.'
-                    ' \n\nExample: \n    python rolepolicies.py -s ec2 -a Desc. -r \* -e Allow -p ^Amazon',
+                    ' \n\nExample: \n    python rolepolicies.py -s ec2 -a Desc* -r \* -e Allow -p ^Amazon',
         formatter_class=RawTextHelpFormatter)
     parser.add_argument('-s', '--service', help='Regular expression filter for the Service column.', required=False)
     parser.add_argument('-a', '--action', help='Regular expression filter for the Action column.', required=False)
