@@ -85,6 +85,7 @@ def policy_enumerate(args):
     print('\nThe following permissions belong to the role {}: \n'.format(role))
 
     values = []
+    values2 = []
 
     for attached_policy in response1['AttachedPolicies']:
         role_policy1 = iamres.Policy(attached_policy['PolicyArn'])
@@ -110,8 +111,6 @@ def policy_enumerate(args):
         role_policy2 = iamres.RolePolicy(role, policy_name)
         policy_statement = role_policy2.policy_document['Statement']
 
-        values2 = []
-
         for pol_stat in policy_statement:
             resource = pol_stat['Resource']
             effect = pol_stat['Effect']
@@ -127,26 +126,33 @@ def policy_enumerate(args):
 
     values_to_print = []
 
+    match_all = True
+
     for value in values:
         match = True
 
         if args['service'] and re.match(args['service'], value[0]):
+            print(value)
             values_to_print.append(value)
             match = False
+            match_all = False
         if match and args['action'] and (re.match(args['action'], value[1]) or value[1] == '*'):
             values_to_print.append(value)
             match = False
+            match_all = False
         if match and args['resource'] and re.match(args['resource'], value[2]):
             values_to_print.append(value)
             match = False
+            match_all = False
         if match and args['effect'] and re.match(args['effect'], value[3]):
             values_to_print.append(value)
             match = False
+            match_all = False
         if match and args['policyname'] and re.match(args['policyname'], value[4]):
             values_to_print.append(value)
-            match = False
+            match_all = False
 
-    if match:
+    if match_all:
         values_to_print = values
 
     print_table(values_to_print, ["Service", "Action", "Resource", "Effect", "Policy name"])
