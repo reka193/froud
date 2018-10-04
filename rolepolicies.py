@@ -136,7 +136,8 @@ def policy_enumerate(args):
             values_to_print.append(value)
             match = False
             match_all = False
-        if match and args['action'] and (re.match(args['action'], value[1]) or value[1] == '*'):
+        if match and args['action'] and (re.match(args['action'], value[1]) or (value[1] == '*' and
+                                                                                value[0] in ["iam", "s3", "dynamodb", "lambda"])):
             values_to_print.append(value)
             match = False
             match_all = False
