@@ -13,8 +13,8 @@ def init():
                     '[*] The results are saved to $currentpath/dynamodb_scan folder.\n'
                     '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
                     'usage: \n    '
-                    'python dynamo.py -t <TableName>\n    '
-                    'python dynamo.py -t <TableName> -b <BucketName>',
+                    'python dynamodb.py -t <TableName>\n    '
+                    'python dynamodb.py -t <TableName> -b <BucketName>',
         formatter_class=RawTextHelpFormatter)
     required = parser.add_argument_group('required arguments')
     required.add_argument('-t', '--tableName', help='Specify the name of the table.', required=True)
@@ -80,7 +80,7 @@ def scan_table(table, region_name_for_logs):
 
 def write_to_file(table, data):
 
-    print('Writing files to currentpath/scan_results folder...')
+    print('Writing files to $currentpath/dynamodb_scan folder...')
     current_directory = os.getcwd()
     final_directory = os.path.join(current_directory, r'dynamodb_scan')
     if not os.path.exists(final_directory):
@@ -108,7 +108,7 @@ def write_to_file(table, data):
                 del data[:1000]
         count += 1000
 
-    print('Files can be found in currentpath/dynamodb_scan folder.')
+    print('Files can be found in $currentpath/dynamodb_scan folder.')
 
     return filenames
 
