@@ -2,13 +2,13 @@
 "region_name": "local",
 "aws_access_key_id": "asd",
 "aws_secret_access_key": "asd",
+"region_name_for_logs": "us-west-2",
 "upload_endpoint_url": "http://localhost:8000",
 "fuzz_endpoint_url": "http://localhost:8001",
 "sqs_message":[
         {
             "timestamp":"#2018-08-01T10:57:36Z#",
-            "id":1,
-            }
+            "id":1
         }
     ]
 }
