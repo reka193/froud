@@ -123,8 +123,9 @@ def list_and_save(logs_client, args):
                                                         startTime=start_time, endTime=stop_time)
                 events = log_events['events']
 
+                group_name = re.sub('[^\w\s-]', '', group_name)
+                stream_name = re.sub('[^\w\s-]', '', stream_name)
                 gr_st = group_name + '/' + stream_name
-                gr_st = re.sub('[^\w\s-]', '', gr_st)
 
                 current_directory = os.getcwd()
                 final_directory = os.path.join(current_directory, r'cw_logs')
