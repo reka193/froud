@@ -116,7 +116,7 @@ def write_to_file(table, data):
 
 def upload_files(s3_client, filenames, bucket_name):
 
-    print('Uploading files...')
+    print('Uploading files to the bucket {}...'.format(bucket_name))
     for f in filenames:
         try:
             key = f.split('/')[-2:]
@@ -148,7 +148,6 @@ def main():
         bucket_name = args['bucketName']
         try:
             upload_files(s3_client, filenames, bucket_name)
-            print ("Files are uploaded to the given bucket.")
         except Exception as e:
             print(e)
 
