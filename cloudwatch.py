@@ -207,9 +207,10 @@ def main():
 
         if args['bucketName']:
             bucket_name = args['bucketName']
-            upload_files(s3_client, filenames, bucket_name)
-            print ("Files are uploaded to the given bucket.")
-
+            if filenames:
+                upload_files(s3_client, filenames, bucket_name)
+            else:
+                print('There are no files to upload.')
     except:
         print('Error while creating the S3 client.')
 
