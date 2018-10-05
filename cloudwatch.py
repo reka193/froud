@@ -132,15 +132,14 @@ def list_and_save(logs_client, args):
                 if not os.path.exists(final_directory):
                     os.makedirs(final_directory)
 
-                file_name = final_directory + '/' + gr_st + '.txt'
-                filenames.append(file_name)
-
                 try:
                     message = ''
                     for event in events:
                         if event['message']:
                             message = message + event['message'] + '\n'
                     if message:
+                        file_name = final_directory + '/' + gr_st + '.txt'
+                        filenames.append(file_name)
                         with open(file_name, 'w+') as f:
                             f.write(message)
 
