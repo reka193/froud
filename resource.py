@@ -1,64 +1,25 @@
 import skew
 from skew.arn import ARN
 from prettytable import PrettyTable
-import requests
 import sys
-import json
-import os
 import argparse
 from argparse import RawTextHelpFormatter
+from common import init_keys
 
 
 def init():
     init_keys()
-    
+
     parser = argparse.ArgumentParser(
-        description='[*] List of available services.\n'
+        description='[*] List of available resources.\n'
                     '[*] The results can be filtered by the name of the service. Default value: [dynamodb, s3, sqs]'
                     '\n\nusage: \n    python resource.py -s <ServiceName>',
         formatter_class=RawTextHelpFormatter)
     parser.add_argument('-s', '--service', help='Filter the type of services by choosing from {dynamodb, s3, sqs}. At a time, only one service can be used for filtering.', required=False)
-    
+
     args = vars(parser.parse_args())
-    
+
     return args
-
-
-def init_keys():
-    access_key_id = get_keys_and_token("AccessKeyId")
-    secret_access_key = get_keys_and_token("SecretAccessKey")
-    token = get_keys_and_token("Token")
-
-    save_credentials(access_key_id, secret_access_key, token)
-
-
-def get_keys_and_token(key):
-    try:
-        url = 'http://169.254.169.254/latest/meta-data/iam/security-credentials/'
-        role = requests.get(url).text
-        response = requests.get(url + str(role)).text
-    except requests.exceptions.RequestException as e:
-        print("Request error: {}".format(e))
-        sys.exit()
-    try:
-        text = json.loads(response)
-        final_request_value = text[key]
-    except Exception as e:
-        print("Error parsing " + str(key) + ": {}".format(e))
-        sys.exit()
-    return final_request_value
-
-
-def save_credentials(access_key_id, secret_access_key, token):
-    final_directory = '/home/ec2-user/.aws'
-
-    if not os.path.exists(final_directory):
-        os.makedirs(final_directory)
-
-    file_name = final_directory + '/credentials'
-
-    with open(file_name, 'w+') as f:
-        f.write("[default]\naws_access_key_id = {}\naws_secret_access_key = {}\naws_session_token = {}\n".format(access_key_id, secret_access_key, token))
 
 
 def enum_resources(arn, services):
