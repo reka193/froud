@@ -6,6 +6,7 @@ from argparse import RawTextHelpFormatter
 import json
 import sys
 from common import upload_files
+from common import load_config_json
 
 
 def init():
@@ -35,27 +36,6 @@ def init():
     s3_client = session.client('s3')
 
     return args, region_name_for_logs, s3_client
-
-
-def load_config_json(config_json_filename):
-    try:
-        with open(config_json_filename) as config_file_handler:
-            try:
-                config_json = json.load(config_file_handler)
-            except Exception as e:
-                print("Error parsing config file: {}".format(e))
-                sys.exit()
-    except Exception as e:
-        print("Error opening file: {}".format(e))
-        return False
-
-    try:
-        region_name_for_logs = config_json["region_name_for_logs"]
-    except Exception as e:
-        print("Error parsing 'region_name_for_logs' from the config file: {}".format(e))
-        sys.exit()
-
-    return True, region_name_for_logs
 
 
 def scan_table(table, region_name_for_logs):
