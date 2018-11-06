@@ -1,181 +1,103 @@
 import boto3
-import datetime
-import re
-import os
-import sys
 import json
-import argparse
 import requests
+import argparse
+import sys
 from argparse import RawTextHelpFormatter
 from prettytable import PrettyTable
-from common import upload_files
+from botocore.exceptions import ClientError
 from common import load_config_json
 
 
+parser = argparse.ArgumentParser(description='[*] Lambda function uploader.\n'
+                                             '[*] Specify the zip file to upload with the function name and runtime environment.'
+                                             ' \n\nusage: \n    python lambda.py -f <FileName> -func <FunctionName> -r <RunTimeEnv>', formatter_class=RawTextHelpFormatter)
+
+required = parser.add_argument_group('required arguments')
+required.add_argument('-f', '--fileName', help='The name of the zip file containing your deployment package.', required=True)
+required.add_argument('-func', '--functionName', help='The name you want to assign to the function you are uploading.', required=True)
+required.add_argument('-r', '--runTime', help='The runtime environment for the Lambda function you are uploading. E.g.: python2.7', required=True)
+args = vars(parser.parse_args())
+
+
 def init():
-    parser = argparse.ArgumentParser(
-        description='[*] Cloudwatch log scanner.\n'
-                    '[*] The results are saved to $currentpath/cw_logs folder.\n'
-                    '[*] The logs are read for a specified number of hours until the current time. Default value: 24 hours.\n'
-                    '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
-                    'usage: \n    '
-                    'python cloudwatch.py -t <TimeInHours>\n    '
-                    'python cloudwatch.py -b <BucketName>',
-        formatter_class=RawTextHelpFormatter)
-    optional = parser.add_argument_group('optional arguments')
-    optional.add_argument('-b', '--bucketName', help='Specify the name of the bucket.', required=False)
-    optional.add_argument('-t', '--time', help='Specify the number of hours to read the logs until the current time. Default value: 24 hours.', required=False)
-
-    args = vars(parser.parse_args())
-
     # If the config file cannot be loaded then boto3 will use its cached data because the global variables contain nonesens ("N/A")
-    config_parsing_was_successful, region_name_for_logs = load_config_json(
-        "conf.json")
+    config_parsing_was_successful, region_name_for_logs = load_config_json("conf.json")
 
     if not config_parsing_was_successful:
         region_name_for_logs = "N/A"
 
-    init_keys()
+    lambda_client = boto3.client('lambda', region_name=region_name_for_logs)
+    r = requests.get('http://169.254.169.254/latest/meta-data/iam/info')
+    role_arn = json.loads(r.text)['InstanceProfileArn']
 
-    logs_client = boto3.client('logs', region_name=region_name_for_logs)
-
-    return args, region_name_for_logs, logs_client
-
-
-def init_keys():
-    access_key_id = get_keys_and_token("AccessKeyId")
-    secret_access_key = get_keys_and_token("SecretAccessKey")
-    token = get_keys_and_token("Token")
-
-    save_credentials(access_key_id, secret_access_key, token)
+    return lambda_client, role_arn
 
 
-def get_keys_and_token(key):
+def list_functions(lambda_client):
+
     try:
-        url = 'http://169.254.169.254/latest/meta-data/iam/security-credentials/'
-        role = requests.get(url).text
-        response = requests.get(url + str(role)).text
-    except requests.exceptions.RequestException as e:
-        print("Request error: {}".format(e))
-        sys.exit()
-    try:
-        text = json.loads(response)
-        final_request_value = text[key]
-    except Exception as e:
-        print("Error parsing " + str(key) + ": {}".format(e))
-        sys.exit()
-    return final_request_value
-
-
-def save_credentials(access_key_id, secret_access_key, token):
-    final_directory = '/home/ec2-user/.aws'
-
-    if not os.path.exists(final_directory):
-        os.makedirs(final_directory)
-
-    file_name = final_directory + '/credentials'
-
-    with open(file_name, 'w+') as f:
-        f.write("[default]\naws_access_key_id = {}\naws_secret_access_key = {}\naws_session_token = {}\n".format(access_key_id, secret_access_key, token))
-
-
-def list_and_save(logs_client, args):
-    try:
-        groups = logs_client.describe_log_groups()['logGroups']
+        functions = lambda_client.list_functions()
         values = []
-        filenames = []
 
-        if args['time']:
-            hours_ago = datetime.datetime.utcnow() - datetime.timedelta(hours=int(args['time']))
-        else:
-            hours_ago = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
-        start_time = int(hours_ago.strftime("%s")) * 1000
-        stop_time = int(datetime.datetime.utcnow().strftime("%s")) * 1000
-
-        for group in groups:
-            group_name = group['logGroupName']
-            streams = logs_client.describe_log_streams(logGroupName=group_name)['logStreams']
-            for stream in streams:
-                stream_name = stream['logStreamName']
-                values.append(str(group_name))
-
-                log_events = logs_client.get_log_events(logGroupName=group_name, logStreamName=stream_name,
-                                                        startTime=start_time, endTime=stop_time)
-                events = log_events['events']
-
-                group_name = re.sub('[^\w\s-]', '', group_name)
-                stream_name = re.sub('[^\w\s-]', '', stream_name)
-                gr_st = group_name + '/' + stream_name
-
-                current_directory = os.getcwd()
-                final_directory = os.path.join(current_directory, r'cw_logs')
-                if not os.path.exists(final_directory):
-                    os.makedirs(final_directory)
-
-                try:
-                    message = ''
-                    for event in events:
-                        if event['message']:
-                            message = message + event['message'] + '\n'
-                    if message:
-                        file_name = final_directory + '/' + gr_st + '.txt'
-                        filenames.append(file_name)
-                        with open(file_name, 'w+') as f:
-                            f.write(message)
-
-                except Exception as e:
-                    print('File is skipped: {}, due to: {}'.format(file_name, e))
-        print('Files downloaded to $currentpath/cw_logs folder.')
-        values = set(values)
-        return filenames, values
-
+        for func in functions['Functions']:
+            values.append([func['FunctionName'], func['Runtime'], func['Description']])
     except Exception as e:
-            print(e)
+        print('Error: {}'.format(e))
+
+    return values
 
 
-def print_table(values):
-    nums = range(len(values))
-    nums = [x + 1 for x in nums]
-    values_to_print = [list(a) for a in zip(nums, values)]
+def create_run_function(lambda_client, role_arn):
 
-    values_to_print.sort()
+    role_arn_mod = ':'.join(role_arn.split(':')[:5]) + ':role/' + role_arn.split('/')[1]
+
+    try:
+        with open(args['fileName'], 'rb') as f:
+            zipped_code = f.read()
+    except Exception as e:
+        print('Commandline specified file could not be loaded: {}'.format(e))
+
+    try:
+        lambda_client.create_function(
+          FunctionName=args['functionName'],
+          Runtime=args['runTime'],
+          Role=role_arn_mod,
+          Handler='main.handler',
+          Code={'ZipFile': zipped_code}
+        )
+        print('\nThe new Lambda function is uploaded.')
+
+    except ClientError as ce:
+        if ce.response['Error']['Code'] == 'InvalidParameterValueException':
+            # print('Error: Could not unzip uploaded file. Please check your file, then try to upload again.')
+            print(ce)
+
+    try:
+        lambda_client.invoke(FunctionName=args['functionName'])
+    except Exception as e:
+        print(e)
+
+
+def print_table(values, fieldnames):
+    values.sort()
     x = PrettyTable()
-    x.field_names = ["No.", "Groups"]
-    x.align["Groups"] = "l"
+    x.field_names = fieldnames
+    for field in fieldnames:
+        x.align[field] = "l"
 
-    for value in values_to_print:
+    for value in values:
         x.add_row(value)
 
-    print('\nAvailable Cloudwatch logs: \n')
     print(x)
 
 
 def main():
-
-    args, region_name_for_logs, logs_client = init()
-
-    try:
-        print('Collecting CloudWatch logs...')
-        filenames, values = list_and_save(logs_client, args)
-
-    except:
-        print('Error collecting logs.')
-        sys.exit()
-
-    print_table(values)
-
-    try:
-        session = boto3.Session()
-        s3_client = session.client('s3')
-
-        if args['bucketName']:
-            bucket_name = args['bucketName']
-            if filenames:
-                upload_files(s3_client, filenames, bucket_name)
-            else:
-                print('There are no files to upload.')
-    except:
-        print('Error while creating the S3 client.')
+    lambda_client, role_arn = init()
+    values = list_functions(lambda_client)
+    print('\nThe existing functions in Lambda:')
+    print_table(values, ['FunctionName', 'Runtime', 'Description'])
+    create_run_function(lambda_client, role_arn)
 
 
 if __name__ == '__main__':
