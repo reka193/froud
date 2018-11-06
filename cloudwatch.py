@@ -9,6 +9,7 @@ import requests
 from argparse import RawTextHelpFormatter
 from prettytable import PrettyTable
 from common import upload_files
+from common import load_config_json
 
 
 def init():
@@ -76,27 +77,6 @@ def save_credentials(access_key_id, secret_access_key, token):
 
     with open(file_name, 'w+') as f:
         f.write("[default]\naws_access_key_id = {}\naws_secret_access_key = {}\naws_session_token = {}\n".format(access_key_id, secret_access_key, token))
-
-
-def load_config_json(config_json_filename):
-    try:
-        with open(config_json_filename) as config_file_handler:
-            try:
-                config_json = json.load(config_file_handler)
-            except Exception as e:
-                print("Error parsing config file: {}".format(e))
-                sys.exit()
-    except Exception as e:
-        print("Error opening file: {}".format(e))
-        return False
-
-    try:
-        region_name_for_logs = config_json["region_name_for_logs"]
-    except Exception as e:
-        print("Error parsing 'region_name_for_logs' from the config file: {}".format(e))
-        sys.exit()
-
-    return True, region_name_for_logs
 
 
 def list_and_save(logs_client, args):
