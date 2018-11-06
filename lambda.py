@@ -2,11 +2,10 @@ import boto3
 import json
 import requests
 import argparse
-import sys
 from argparse import RawTextHelpFormatter
-from prettytable import PrettyTable
 from botocore.exceptions import ClientError
 from common import load_config_json
+from common import print_table
 
 
 parser = argparse.ArgumentParser(description='[*] Lambda function uploader.\n'
@@ -77,19 +76,6 @@ def create_run_function(lambda_client, role_arn):
         lambda_client.invoke(FunctionName=args['functionName'])
     except Exception as e:
         print(e)
-
-
-def print_table(values, fieldnames):
-    values.sort()
-    x = PrettyTable()
-    x.field_names = fieldnames
-    for field in fieldnames:
-        x.align[field] = "l"
-
-    for value in values:
-        x.add_row(value)
-
-    print(x)
 
 
 def main():
