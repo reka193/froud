@@ -1,11 +1,11 @@
 import boto3
 import requests
 import json
-from prettytable import PrettyTable
 import argparse
 from argparse import RawTextHelpFormatter
 import re
 from common import init_keys
+from common import print_table
 
 
 def init():
@@ -119,20 +119,6 @@ def policy_enumerate(args):
         values_to_print = values
 
     print_table(values_to_print, ["Service", "Action", "Resource", "Effect", "Policy name"])
-
-
-def print_table(values, fieldnames):
-    values.sort()
-    x = PrettyTable()
-    x.field_names = fieldnames
-
-    for field in fieldnames:
-        x.align[field] = "l"
-
-    for value in values:
-        x.add_row(value)
-
-    print(x)
 
 
 if __name__ == '__main__':
