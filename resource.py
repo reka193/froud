@@ -1,10 +1,10 @@
 import skew
 from skew.arn import ARN
-from prettytable import PrettyTable
 import sys
 import argparse
 from argparse import RawTextHelpFormatter
 from common import init_keys
+from common import print_table
 
 
 def init():
@@ -40,20 +40,6 @@ def enum_resources(arn, services):
         except Exception as e:
             print(e)
     return values
-
-
-def print_table(values, fieldnames):
-    values.sort()
-    x = PrettyTable()
-    x.field_names = fieldnames
-
-    for field in fieldnames:
-        x.align[field] = "l"
-
-    for value in values:
-        x.add_row(value)
-
-    print(x)
 
 
 def main():
