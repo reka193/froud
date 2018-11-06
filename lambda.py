@@ -6,6 +6,7 @@ import sys
 from argparse import RawTextHelpFormatter
 from prettytable import PrettyTable
 from botocore.exceptions import ClientError
+from common import load_config_json
 
 
 parser = argparse.ArgumentParser(description='[*] Lambda function uploader.\n'
@@ -31,27 +32,6 @@ def init():
     role_arn = json.loads(r.text)['InstanceProfileArn']
 
     return lambda_client, role_arn
-
-
-def load_config_json(config_json_filename):
-    try:
-        with open(config_json_filename) as config_file_handler:
-            try:
-                config_json = json.load(config_file_handler)
-            except Exception as e:
-                print("Error parsing config file: {}".format(e))
-                sys.exit()
-    except Exception as e:
-        print("Error opening file: {}".format(e))
-        return False
-
-    try:
-        region_name_for_logs = config_json["region_name_for_logs"]
-    except Exception as e:
-        print("Error parsing 'region_name_for_logs' from the config file: {}".format(e))
-        sys.exit()
-
-    return True, region_name_for_logs
 
 
 def list_functions(lambda_client):
@@ -97,7 +77,6 @@ def create_run_function(lambda_client, role_arn):
         lambda_client.invoke(FunctionName=args['functionName'])
     except Exception as e:
         print(e)
-
 
 
 def print_table(values, fieldnames):
