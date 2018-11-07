@@ -86,6 +86,12 @@ def policy_enumerate(args):
 
     values = values + values2
 
+    values_to_print = filter_results(values)
+
+    print_table(values_to_print, ["Service", "Action", "Resource", "Effect", "Policy name"])
+
+
+def filter_results(values):
     values_to_print = []
 
     match_all = True
@@ -94,12 +100,11 @@ def policy_enumerate(args):
         match = True
 
         if args['service'] and re.match(args['service'], value[0]):
-            print(value)
             values_to_print.append(value)
             match = False
             match_all = False
-        if match and args['action'] and (re.match(args['action'], value[1]) or (value[1] == '*' and
-                                                                                value[0] in ["iam", "s3", "dynamodb", "lambda"])):
+        if match and args['action'] and (re.match(args['action'], value[1]) or
+                                         (value[1] == '*' and value[0] in ["iam", "s3", "dynamodb", "lambda"])):
             values_to_print.append(value)
             match = False
             match_all = False
@@ -118,7 +123,7 @@ def policy_enumerate(args):
     if match_all:
         values_to_print = values
 
-    print_table(values_to_print, ["Service", "Action", "Resource", "Effect", "Policy name"])
+    return values_to_print
 
 
 if __name__ == '__main__':
