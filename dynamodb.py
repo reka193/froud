@@ -1,29 +1,26 @@
 import boto3
 from botocore.exceptions import ClientError
-import os
 import argparse
 from argparse import RawTextHelpFormatter
-import json
 import sys
 from common import upload_files
 from common import load_config_json
+from common import init_keys
+from common import write_to_file
+from common import parsing
 
 
 def init():
-    parser = argparse.ArgumentParser(
-        description='[*] Scanner for DynamoDB tables.\n'
-                    '[*] The results are saved to $currentpath/dynamodb_scan folder.\n'
-                    '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
-                    'usage: \n    '
-                    'python dynamodb.py -t <TableName>\n    '
-                    'python dynamodb.py -t <TableName> -b <BucketName>',
-        formatter_class=RawTextHelpFormatter)
-    required = parser.add_argument_group('required arguments')
-    required.add_argument('-t', '--tableName', help='Specify the name of the table.', required=True)
-    optional = parser.add_argument_group('optional arguments')
-    optional.add_argument('-b', '--bucketName', help='Specify the name of the bucket.', required=False)
+    description = "[*] Scanner for DynamoDB tables.\n " \
+                "[*] The results are saved to $currentpath/dynamodb_scan folder.\n" \
+                "[*] If a bucket is provided, the results are uploaded to the bucket. \n\n" \
+                "   usage: \n" \
+                "   python dynamodb.py -t <TableName>\n" \
+                "   python dynamodb.py -t <TableName> -b <BucketName>"
+    required_params = [['-t', '--tableName', 'Specify the name of the table.']]
+    optional_params = [['-b', '--bucketName', 'Specify the name of the bucket.']]
 
-    args = vars(parser.parse_args())
+    args = parsing(description, required_params, optional_params)
 
     # If the config file cannot be loaded then boto3 will use its cached data because the global variables
     # contain nonesens ("N/A")
@@ -34,6 +31,8 @@ def init():
 
     session = boto3.Session()
     s3_client = session.client('s3')
+
+    init_keys()
 
     return args, region_name_for_logs, s3_client
 
@@ -59,41 +58,6 @@ def scan_table(table, region_name_for_logs):
     return data
 
 
-def write_to_file(table, data):
-
-    print('Writing files to $currentpath/dynamodb_scan folder...')
-    current_directory = os.getcwd()
-    final_directory = os.path.join(current_directory, r'dynamodb_scan')
-    if not os.path.exists(final_directory):
-        os.makedirs(final_directory)
-
-    count = 1
-    filenames = []
-
-    while len(data) > 0:
-
-        if len(data) <= 1000:
-            file_name = final_directory + '/' + table + '-' + str(count) + '-' + str(count+999) + '.txt'
-            filenames.append(file_name)
-            with open(file_name, 'w+') as f:
-                for line in data:
-                    f.write(json.dumps(line))
-                del data[:]
-
-        else:
-            file_name = final_directory + '/' + table + str(count) + '.txt'
-            filenames.append(file_name)
-            with open(file_name, 'w+') as f:
-                for line in data[:1000]:
-                    f.write(json.dumps(line))
-                del data[:1000]
-        count += 1000
-
-    print('Files can be found in $currentpath/dynamodb_scan folder.')
-
-    return filenames
-
-
 def main():
 
     args, region_name_for_logs, s3_client = init()
@@ -105,7 +69,7 @@ def main():
         sys.exit()
 
     data = scan_table(table, region_name_for_logs)
-    filenames = write_to_file(table, data)
+    filenames = write_to_file('dynamodb', table, data)
 
     if args['bucketName']:
         bucket_name = args['bucketName']
