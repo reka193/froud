@@ -9,23 +9,21 @@ from prettytable import PrettyTable
 from common import upload_files
 from common import load_config_json
 from common import init_keys
+from common import parsing
 
 
 def init():
-    parser = argparse.ArgumentParser(
-        description='[*] Cloudwatch log scanner.\n'
-                    '[*] The results are saved to $currentpath/cw_logs folder.\n'
-                    '[*] The logs are read for a specified number of hours until the current time. Default value: 24 hours.\n'
-                    '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
-                    'usage: \n    '
-                    'python cloudwatch.py -t <TimeInHours>\n    '
-                    'python cloudwatch.py -b <BucketName>',
-        formatter_class=RawTextHelpFormatter)
-    optional = parser.add_argument_group('optional arguments')
-    optional.add_argument('-b', '--bucketName', help='Specify the name of the bucket.', required=False)
-    optional.add_argument('-t', '--time', help='Specify the number of hours to read the logs until the current time. Default value: 24 hours.', required=False)
+    description = '[*] Cloudwatch log scanner.\n'
+    '[*] The results are saved to $currentpath/cw_logs folder.\n'
+    '[*] The logs are read for a specified number of hours until the current time. Default value: 24 hours.\n'
+    '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
+    '   usage: \n    '
+    '   python cloudwatch.py -t <TimeInHours>\n'
+    '   python cloudwatch.py -b <BucketName>'
+    optional_params = [['-b', '--bucketName', 'Specify the name of the bucket.'],
+                       ['-t', '--time', 'Specify the number of hours to read the logs until the current time. Default value: 24 hours.']]
 
-    args = vars(parser.parse_args())
+    args = parsing(description, optional_params=optional_params)
 
     # If the config file cannot be loaded then boto3 will use its cached data because the global variables contain nonesens ("N/A")
     config_parsing_was_successful, region_name_for_logs = load_config_json(
