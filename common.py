@@ -3,7 +3,27 @@ import sys
 import json
 import requests
 import os
+import argparse
+from argparse import RawTextHelpFormatter
 from boto3.exceptions import S3UploadFailedError
+from prettytable import PrettyTable
+
+
+def parsing(description, required_params=None, optional_params=None):
+    parser = argparse.ArgumentParser(description, formatter_class=RawTextHelpFormatter)
+    required = parser.add_argument_group('required arguments')
+    optional = parser.add_argument_group('optional arguments')
+
+    if required_params:
+        for req in required_params:
+                required.add_argument(req[0], req[1], help=req[2], required=True)
+
+    if optional_params:
+        for opt in optional_params:
+            optional.add_argument(opt[0], opt[1], help=opt[2], required=False)
+
+    args = vars(parser.parse_args())
+    return args
 
 
 def init_keys():
@@ -79,3 +99,51 @@ def upload_files(s3_client, filenames, bucket_name):
             print('The uploaded file is public and accessible with the following url: \n    {}'.format(file_url))
         except S3UploadFailedError:
             print('File upload is not successful: PutObject permission missing.')
+
+
+def print_table(values, fieldnames):
+    values.sort()
+    x = PrettyTable()
+    x.field_names = fieldnames
+    for field in fieldnames:
+        x.align[field] = "l"
+
+    for value in values:
+        x.add_row(value)
+
+    print(x)
+
+
+def write_to_file(service, resource_name, data):
+
+    print('Writing files...'.format(service))
+    current_directory = os.getcwd()
+    final_directory = os.path.join(current_directory, r'{}_scan'.format(service))
+    if not os.path.exists(final_directory):
+        os.makedirs(final_directory)
+
+    count = 1
+    filenames = []
+
+    while len(data) > 0:
+
+        if len(data) <= 1000:
+            file_name = final_directory + '/' + resource_name + '-' + str(count) + '-' + str(count+999) + '.txt'
+            filenames.append(file_name)
+            with open(file_name, 'w+') as f:
+                for line in data:
+                    f.write(json.dumps(line))
+                del data[:]
+
+        else:
+            file_name = final_directory + '/' + resource_name + str(count) + '.txt'
+            filenames.append(file_name)
+            with open(file_name, 'w+') as f:
+                for line in data[:1000]:
+                    f.write(json.dumps(line))
+                del data[:1000]
+        count += 1000
+
+    print('Files can be found in $currentpath/{}_scan folder.'.format(service))
+
+    return filenames
