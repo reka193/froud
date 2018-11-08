@@ -6,26 +6,24 @@ from common import upload_files
 from common import load_config_json
 from common import write_to_file
 from common import init_keys
+from common import parsing
 
 
 def init():
     #init_keys()
-    parser = argparse.ArgumentParser(description='[*] SQS message scanner.\n'
-                                                 '[*] Specify the name of the queue to save the messages from.\n'
-                                                 '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
-                                                 '\n\nusage: \n    python sqs.py -q <QueueName> -f <FileName>\n'
-                                                 'python sqs.py -q <QueueName> -b <BucketName>',
-                                     formatter_class=RawTextHelpFormatter)
+    description = '[*] SQS message scanner.\n' \
+                  '[*] Specify the name of the queue to save the messages from.\n' \
+                  '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n' \
+                  '    usage: \n' \
+                  '    python sqs.py -q <QueueName> -f <FileName>\n' \
+                  '    python sqs.py -q <QueueName> -b <BucketName>'
 
-    required = parser.add_argument_group('required arguments')
-    required.add_argument('-q', '--queueName', help='Specify the name of the queue.', required=True)
-    optional = parser.add_argument_group('optional arguments')
-    optional.add_argument('-b', '--bucketName', help='Specify the name of the bucket.', required=False)
+    required_params = [['-q', '--queueName', 'Specify the name of the queue.']]
+    optional_params = [['-b', '--bucketName', 'Specify the name of the bucket.']]
 
-    args = vars(parser.parse_args())
+    args = parsing(description, required_params, optional_params)
 
-    # If the config file cannot be loaded then boto3 will use its cached data because the global variables
-    # contain nonsense ("N/A")
+    # If the config file cannot be loaded, boto3 will use the credentials from ~/.aws/credentials
     config_parsing_was_successful, region_name_for_logs = load_config_json("conf.json")
 
     if not config_parsing_was_successful:
