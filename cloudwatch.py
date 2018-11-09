@@ -3,8 +3,6 @@ import datetime
 import re
 import os
 import sys
-import argparse
-from argparse import RawTextHelpFormatter
 from prettytable import PrettyTable
 from common import upload_files
 from common import load_config_json
@@ -21,7 +19,8 @@ def init():
     '   python cloudwatch.py -t <TimeInHours>\n'
     '   python cloudwatch.py -b <BucketName>'
     optional_params = [['-b', '--bucketName', 'Specify the name of the bucket.'],
-                       ['-t', '--time', 'Specify the number of hours to read the logs until the current time. Default value: 24 hours.']]
+                       ['-t', '--time', 'Specify the number of hours to read the logs '
+                                        'until the current time. Default value: 24 hours.']]
 
     args = parsing(description, optional_params=optional_params)
 
@@ -63,9 +62,9 @@ def list_and_save(logs_client, args):
                                                         startTime=start_time, endTime=stop_time)
                 events = log_events['events']
 
-                group_name = re.sub('[^\w\s-]', '', group_name)
-                stream_name = re.sub('[^\w\s-]', '', stream_name)
-                gr_st = group_name + '/' + stream_name
+                groupname = re.sub('[^\w\s-]', '', group_name)
+                streamname = re.sub('[^\w\s-]', '', stream_name)
+                gr_st = groupname + '--' + streamname
 
                 current_directory = os.getcwd()
                 final_directory = os.path.join(current_directory, r'cw_logs')
@@ -88,9 +87,6 @@ def list_and_save(logs_client, args):
         print('Files downloaded to $currentpath/cw_logs folder.')
         values = set(values)
         return filenames, values
-
-    except Exception as e:
-            print(e)
 
 
 def print_table(values):
