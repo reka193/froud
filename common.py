@@ -15,15 +15,18 @@ def parsing(description, required_params=None, optional_params=None):
     optional = parser.add_argument_group('optional arguments')
 
     if required_params:
-        for req in required_params:
-                required.add_argument(req[0], req[1], help=req[2], required=True)
-
+        add_params(required, required_params, True)
     if optional_params:
-        for opt in optional_params:
-            optional.add_argument(opt[0], opt[1], help=opt[2], required=False)
+        add_params(optional, optional_params, False)
 
     args = vars(parser.parse_args())
     return args
+
+
+def add_params(pars, params, req):
+    for par in params:
+        pars.add_argument(par[0], par[1], help=par[2], required=req)
+    return pars
 
 
 def init_keys():
