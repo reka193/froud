@@ -39,54 +39,54 @@ def init():
 
 
 def list_and_save(logs_client, args):
-    try:
-        groups = logs_client.describe_log_groups()['logGroups']
-        values = []
-        filenames = []
+    groups = logs_client.describe_log_groups()['logGroups']
+    values = []
+    filenames = []
 
-        if args['time']:
-            hours_ago = datetime.datetime.utcnow() - datetime.timedelta(hours=int(args['time']))
-        else:
-            hours_ago = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
-        start_time = int(hours_ago.strftime("%s")) * 1000
-        stop_time = int(datetime.datetime.utcnow().strftime("%s")) * 1000
+    if args['time']:
+        hours_ago = datetime.datetime.utcnow() - datetime.timedelta(hours=int(args['time']))
+    else:
+        hours_ago = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
+    start_time = int(hours_ago.strftime("%s")) * 1000
+    stop_time = int(datetime.datetime.utcnow().strftime("%s")) * 1000
 
-        for group in groups:
-            group_name = group['logGroupName']
-            streams = logs_client.describe_log_streams(logGroupName=group_name)['logStreams']
-            for stream in streams:
-                stream_name = stream['logStreamName']
-                values.append(str(group_name))
+    for group in groups:
+        group_name = group['logGroupName']
+        streams = logs_client.describe_log_streams(logGroupName=group_name)['logStreams']
+        for stream in streams:
+            stream_name = stream['logStreamName']
+            values.append(str(group_name))
 
-                log_events = logs_client.get_log_events(logGroupName=group_name, logStreamName=stream_name,
-                                                        startTime=start_time, endTime=stop_time)
-                events = log_events['events']
+            log_events = logs_client.get_log_events(logGroupName=group_name, logStreamName=stream_name,
+                                                    startTime=start_time, endTime=stop_time)
+            events = log_events['events']
 
-                groupname = re.sub('[^\w\s-]', '', group_name)
-                streamname = re.sub('[^\w\s-]', '', stream_name)
-                gr_st = groupname + '--' + streamname
+            groupname = re.sub('[^\w\s-]', '', group_name)
+            streamname = re.sub('[^\w\s-]', '', stream_name)
+            gr_st = groupname + '--' + streamname
 
-                current_directory = os.getcwd()
-                final_directory = os.path.join(current_directory, r'cw_logs')
-                if not os.path.exists(final_directory):
-                    os.makedirs(final_directory)
+            current_directory = os.getcwd()
+            final_directory = os.path.join(current_directory, r'cw_logs')
+            if not os.path.exists(final_directory):
+                os.makedirs(final_directory)
 
-                try:
-                    message = ''
-                    for event in events:
-                        if event['message']:
-                            message = message + event['message'] + '\n'
-                    if message:
-                        file_name = final_directory + '/' + gr_st + '.txt'
-                        filenames.append(file_name)
-                        with open(file_name, 'w+') as f:
-                            f.write(message)
+            try:
+                message = ''
+                for event in events:
+                    if event['message']:
+                        message = message + event['message'] + '\n'
+                if message:
+                    file_name = final_directory + '/' + gr_st + '.txt'
+                    filenames.append(file_name)
+                    with open(file_name, 'w+') as f:
+                        f.write(message)
 
-                except Exception as e:
-                    print('File is skipped: {}, due to: {}'.format(file_name, e))
-        print('Files downloaded to $currentpath/cw_logs folder.')
-        values = set(values)
-        return filenames, values
+            except Exception as e:
+                print('File is skipped: {}, due to: {}'.format(file_name, e))
+    print('Files downloaded to $currentpath/cw_logs folder.')
+    values = set(values)
+
+    return filenames, values
 
 
 def print_table(values):
@@ -107,7 +107,6 @@ def print_table(values):
 
 
 def main():
-
     args, region_name_for_logs, logs_client = init()
 
     try:
