@@ -34,7 +34,7 @@ def init():
     return args
 
 
-def policy_enumerate(args):
+def policy_enumerate():
     iam = boto3.client('iam')
     iamres = boto3.resource('iam')
     r = requests.get('http://169.254.169.254/latest/meta-data/iam/info')
@@ -47,7 +47,6 @@ def policy_enumerate(args):
     print('\nThe following permissions belong to the role {}: \n'.format(role))
 
     values = []
-    values2 = []
 
     for attached_policy in response1['AttachedPolicies']:
         role_policy1 = iamres.Policy(attached_policy['PolicyArn'])
@@ -63,11 +62,9 @@ def policy_enumerate(args):
 
             if type(actions) is list:
                 for action in actions:
-                    values.append(
-                        [action.split(':')[0], action.split(':')[1], resource, effect, role_policy1.arn.split('/')[-1]])
+                    values.append(compose_value(action, resource, effect, role_policy1.arn.split('/')[-1]))
             else:
-                values.append(
-                    [actions.split(':')[0], actions.split(':')[1], resource, effect, role_policy1.arn.split('/')[-1]])
+                values.append(compose_value(actions, resource, effect, role_policy1.arn.split('/')[-1]))
 
     for policy_name in response2['PolicyNames']:
         role_policy2 = iamres.RolePolicy(role, policy_name)
@@ -80,15 +77,18 @@ def policy_enumerate(args):
 
             if type(actions) is list:
                 for action in actions:
-                    values2.append([action.split(':')[0], action.split(':')[1], resource, effect, role_policy2.name])
+                    values.append(compose_value(action, resource, effect, role_policy2.name))
             else:
-                values2.append([actions.split(':')[0], actions.split(':')[1], resource, effect, role_policy2.name])
-
-    values = values + values2
+                values.append(compose_value(actions, resource, effect, role_policy2.name))
 
     values_to_print = filter_results(values)
 
     print_table(values_to_print, ["Service", "Action", "Resource", "Effect", "Policy name"])
+
+
+def compose_value(action, resource, effect, name):
+    val = [action.split(':')[0], action.split(':')[1], resource, effect, name]
+    return val
 
 
 def filter_results(values):
@@ -103,11 +103,6 @@ def filter_results(values):
             values_to_print.append(value)
             match = False
             match_all = False
-        if match and args['action'] and (re.match(args['action'], value[1]) or
-                                         (value[1] == '*' and value[0] in ["iam", "s3", "dynamodb", "lambda"])):
-            values_to_print.append(value)
-            match = False
-            match_all = False
         if match and args['resource'] and re.match(args['resource'], value[2]):
             values_to_print.append(value)
             match = False
@@ -118,6 +113,12 @@ def filter_results(values):
             match_all = False
         if match and args['policyname'] and re.match(args['policyname'], value[4]):
             values_to_print.append(value)
+            match = False
+            match_all = False
+        if match and args['action'] and (re.match(args['action'], value[1]) or
+                                         (value[1] == '*' and value[0] in ["iam", "s3", "dynamodb", "lambda"])):
+            values_to_print.append(value)
+            match = False
             match_all = False
 
     if match_all:
@@ -129,4 +130,4 @@ def filter_results(values):
 if __name__ == '__main__':
 
     args = init()
-    policy_enumerate(args)
+    policy_enumerate()
