@@ -110,8 +110,9 @@ def filter_results(values, args):
                 if key == 'policyname':
                     match = match_function(key_value, value[4])
                     break
-                if key == 'action' and key_value:
-                    if not (re.match(str(key_value), value[1]) or (value[1] == '*' and value[0] in ["iam", "s3", "dynamodb", "lambda"])):
+                if key == 'action' and key_value and not\
+                        (re.match(str(key_value), value[1]) or
+                         (value[1] == '*' and value[0] in ["iam", "s3", "dynamodb", "lambda"])):
                         match = False
                 break
         if match:
