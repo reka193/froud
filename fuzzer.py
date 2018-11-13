@@ -17,14 +17,13 @@ def init():
     sqs_message = {}
 
     # If the config file cannot be loaded then boto3 will use its cached data because the global variables contain nonsense ("N/A")
-    config_parsing_was_successfull, region_name, aws_access_key_id, aws_secret_access_key, upload_endpoint_url, \
-    fuzz_endpoint_url, sqs_message = load_config_json("conf.json")
+    config_parsing_was_successfull, region_name, aws_access_key_id, aws_secret_access_key, fuzz_endpoint_url, \
+    sqs_message = load_config_json("conf.json")
 
     if not config_parsing_was_successfull:
         region_name = "N/A"
         aws_access_key_id = "N/A"
         aws_secret_access_key = "N/A"
-        upload_endpoint_url = "N/A"
         fuzz_endpoint_url = "N/A"
         sqs_message = {}
 
@@ -33,13 +32,8 @@ def init():
                                 region_name=region_name or None,
                                 aws_access_key_id=aws_access_key_id or None,
                                 aws_secret_access_key=aws_secret_access_key or None)
-    session = boto3.Session()
-    s3_client = session.client('s3',
-                               endpoint_url=upload_endpoint_url or None,
-                               region_name=region_name or None,
-                               aws_access_key_id=aws_access_key_id or None,
-                               aws_secret_access_key=aws_secret_access_key or None)
-    return sqs_client, s3_client, sqs_message
+
+    return sqs_client, sqs_message
 
 
 def load_config_json(config_json_filename):
@@ -73,12 +67,6 @@ def load_config_json(config_json_filename):
         sys.exit()
 
     try:
-        upload_endpoint_url = config_json["upload_endpoint_url"]
-    except Exception as e:
-        print("Error parsing 'upload_endpoint_url' from the config file: {}".format(e))
-        sys.exit()
-
-    try:
         fuzz_endpoint_url = config_json["fuzz_endpoint_url"]
     except Exception as e:
         print("Error parsing 'fuzz_endpoint_url' from the config file: {}".format(e))
@@ -90,7 +78,7 @@ def load_config_json(config_json_filename):
         print("Error parsing 'sqs_message' from the config file: {}".format(e))
         sys.exit()
 
-    return True, region_name, aws_access_key_id, aws_secret_access_key, upload_endpoint_url, fuzz_endpoint_url, sqs_message
+    return True, region_name, aws_access_key_id, aws_secret_access_key, fuzz_endpoint_url, sqs_message
 
 
 def create_fuzz_messages(default_message, size=None):
@@ -174,24 +162,9 @@ def fuzz(sqs, queue_name, sqs_message):
             print('Failed message: {}'.format(msg))
 
 
-def upload_file(s3_client, filename):
-
-    try:
-        print("Uploading file: {}".format(filename))
-        tc = boto3.s3.transfer.TransferConfig()
-        t = boto3.s3.transfer.S3Transfer(client=s3_client, config=tc)
-        t.upload_file(filename, 's3-labs-updates-us-west-2', '1/2018/08/01/10/5634-20180801T105736Z-ip-172-31-36-118')
-
-    except Exception as e:
-        print("Error uploading: {}".format(e))
-
-
 if __name__ == "__main__":
-    f = open('helofile', 'wb')
+    sqs, sqs_message = init()
 
-    sqs, s3, sqs_message = init()
-
-    upload_file(s3, 'helofile')
     print("\n\n")
     print("Fuzzing...\n\n")
     fuzz(sqs, 'mrupdater-notifs', sqs_message)
