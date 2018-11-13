@@ -34,7 +34,7 @@ def init():
     return args
 
 
-def policy_enumerate():
+def policy_enumerate(args):
     iam = boto3.client('iam')
     iamres = boto3.resource('iam')
     r = requests.get('http://169.254.169.254/latest/meta-data/iam/info')
@@ -81,7 +81,7 @@ def policy_enumerate():
             else:
                 values.append(compose_value(actions, resource, effect, role_policy2.name))
 
-    values_to_print = filter_results(values)
+    values_to_print = filter_results(values, args)
 
     print_table(values_to_print, ["Service", "Action", "Resource", "Effect", "Policy name"])
 
@@ -91,43 +91,43 @@ def compose_value(action, resource, effect, name):
     return val
 
 
-def filter_results(values):
+def filter_results(values, args):
     values_to_print = []
-
-    match_all = True
 
     for value in values:
         match = True
-
-        if args['service'] and re.match(args['service'], value[0]):
+        for key, key_value in args.iteritems():
+            while match:
+                if key == 'service':
+                    match = match_function(key_value, value[0])
+                    break
+                if key == 'resource':
+                    match = match_function(key_value, value[2])
+                    break
+                if key == 'effect':
+                    match = match_function(key_value, value[3])
+                    break
+                if key == 'policyname':
+                    match = match_function(key_value, value[4])
+                    break
+                if key == 'action' and key_value:
+                    if not (re.match(str(key_value), value[1]) or (value[1] == '*' and value[0] in ["iam", "s3", "dynamodb", "lambda"])):
+                        match = False
+                break
+        if match:
             values_to_print.append(value)
-            match = False
-            match_all = False
-        if match and args['resource'] and re.match(args['resource'], value[2]):
-            values_to_print.append(value)
-            match = False
-            match_all = False
-        if match and args['effect'] and re.match(args['effect'], value[3]):
-            values_to_print.append(value)
-            match = False
-            match_all = False
-        if match and args['policyname'] and re.match(args['policyname'], value[4]):
-            values_to_print.append(value)
-            match = False
-            match_all = False
-        if match and args['action'] and (re.match(args['action'], value[1]) or
-                                         (value[1] == '*' and value[0] in ["iam", "s3", "dynamodb", "lambda"])):
-            values_to_print.append(value)
-            match = False
-            match_all = False
-
-    if match_all:
-        values_to_print = values
 
     return values_to_print
 
 
+def match_function(key_value, component):
+    if key_value and not re.match(str(key_value), component):
+        return False
+    else:
+        return True
+
+
 if __name__ == '__main__':
 
-    args = init()
-    policy_enumerate()
+    arguments = init()
+    policy_enumerate(arguments)
