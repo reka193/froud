@@ -1,13 +1,11 @@
 import boto3
 from botocore.exceptions import ClientError
-import argparse
-from argparse import RawTextHelpFormatter
 import sys
-from common import upload_files
 from common import load_config_json
 from common import init_keys
 from common import write_to_file
 from common import parsing
+from common import bucket_upload
 
 
 def init():
@@ -71,12 +69,7 @@ def main():
     data = scan_table(table, region_name_for_logs)
     filenames = write_to_file('dynamodb', table, data)
 
-    if args['bucketName']:
-        bucket_name = args['bucketName']
-        try:
-            upload_files(s3_client, filenames, bucket_name)
-        except Exception as e:
-            print(e)
+    bucket_upload(args['bucket'], s3_client, filenames)
 
 
 if __name__ == '__main__':
