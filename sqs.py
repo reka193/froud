@@ -1,12 +1,10 @@
 import boto3
 import sys
-import argparse
-from argparse import RawTextHelpFormatter
-from common import upload_files
 from common import load_config_json
 from common import write_to_file
 from common import init_keys
 from common import parsing
+from common import bucket_upload
 
 
 def init():
@@ -69,12 +67,7 @@ def main():
     data = scan_queue(queue_name)
     filenames = write_to_file('sqs', queue_name, data)
 
-    if args['bucketName']:
-        bucket_name = args['bucketName']
-        try:
-            upload_files(s3_client, filenames, bucket_name)
-        except Exception as e:
-            print(e)
+    bucket_upload(args['bucket'], s3_client, filenames)
 
 
 if __name__ == '__main__':
