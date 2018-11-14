@@ -8,24 +8,19 @@ import ast
 
 
 def init():
-    config_parsing_was_successfull = None
-    region_name = ""
-    aws_access_key_id = ""
-    aws_secret_access_key = ""
-    upload_endpoint_url = ""
-    fuzz_endpoint_url = ""
-    sqs_message = {}
 
-    # If the config file cannot be loaded then boto3 will use its cached data because the global variables contain nonsense ("N/A")
-    config_parsing_was_successfull, region_name, aws_access_key_id, aws_secret_access_key, fuzz_endpoint_url, \
-    sqs_message = load_config_json("conf.json")
+    # If the config file cannot be loaded then boto3 will use the aws credentials file
+    config_success, data = load_config_json("conf.json")
 
-    if not config_parsing_was_successfull:
+    if not config_success:
         region_name = "N/A"
         aws_access_key_id = "N/A"
         aws_secret_access_key = "N/A"
-        fuzz_endpoint_url = "N/A"
-        sqs_message = {}
+        fuzz_endpoint_url = ""
+        message_to_fuzz = {}
+
+    else:
+        region_name, aws_access_key_id, aws_secret_access_key, fuzz_endpoint_url, message_to_fuzz = data
 
     sqs_client = boto3.resource('sqs',
                                 endpoint_url=fuzz_endpoint_url or None,
@@ -33,52 +28,34 @@ def init():
                                 aws_access_key_id=aws_access_key_id or None,
                                 aws_secret_access_key=aws_secret_access_key or None)
 
-    return sqs_client, sqs_message
+    return sqs_client, message_to_fuzz
 
 
 def load_config_json(config_json_filename):
+    data = []
     try:
-        with open(config_json_filename) as config_file_handler:
+        with open(config_json_filename, 'r') as f:
             try:
-                config_json = json.load(config_file_handler)
+                config_json = json.load(f)
             except Exception as e:
                 print("Error parsing config file: {}".format(e))
                 sys.exit()
     except Exception as e:
-        print("Error opening file: {}".format(e))
-        return False
+        print("Config file not found.")
+        return False, data
 
     try:
-        region_name = config_json["region_name"]
-    except Exception as e:
-        print("Error parsing 'region_name' from the config file: {}".format(e))
+        data.append(config_json["region_name"])
+        data.append(config_json["aws_access_key_id"])
+        data.append(config_json["aws_secret_access_key"])
+        data.append(config_json["fuzz_endpoint_url"])
+        data.append(config_json["sqs_message"][0])
+
+    except KeyError as key:
+        print("Error parsing 'region_name' from the config file: {}".format(key))
         sys.exit()
 
-    try:
-        aws_access_key_id = config_json["aws_access_key_id"]
-    except Exception as e:
-        print("Error parsing 'aws_access_key_id' from the config file: {}".format(e))
-        sys.exit()
-
-    try:
-        aws_secret_access_key = config_json["aws_secret_access_key"]
-    except Exception as e:
-        print("Error parsing 'aws_secret_access_key' from the config file: {}".format(e))
-        sys.exit()
-
-    try:
-        fuzz_endpoint_url = config_json["fuzz_endpoint_url"]
-    except Exception as e:
-        print("Error parsing 'fuzz_endpoint_url' from the config file: {}".format(e))
-        sys.exit()
-
-    try:
-        sqs_message = config_json["sqs_message"][0]
-    except Exception as e:
-        print("Error parsing 'sqs_message' from the config file: {}".format(e))
-        sys.exit()
-
-    return True, region_name, aws_access_key_id, aws_secret_access_key, fuzz_endpoint_url, sqs_message
+    return True, data
 
 
 def create_fuzz_messages(default_message, size=None):
@@ -146,11 +123,15 @@ def generate_sqs_message_mutations(sqs_message):
     return create_fuzz_messages(json.dumps(out_msg))
 
 
-def fuzz(sqs, queue_name, sqs_message):
+def fuzz(sqs_client, queue_name, sqs_message):
 
-    queue = sqs.create_queue(QueueName=queue_name)
+    try:
+        queue = sqs_client.create_queue(QueueName=queue_name)
 
-    print('Generate messages into the {} queue'.format(queue_name))
+    except Exception as e:
+        print(e)
+
+    print('Generate messages for the queue {}'.format(queue_name))
     messages = generate_sqs_message_mutations(sqs_message)
     counter = 0
     for msg in messages:
@@ -163,8 +144,8 @@ def fuzz(sqs, queue_name, sqs_message):
 
 
 if __name__ == "__main__":
-    sqs, sqs_message = init()
+    sqs, message = init()
 
     print("\n\n")
     print("Fuzzing...\n\n")
-    fuzz(sqs, 'mrupdater-notifs', sqs_message)
+    fuzz(sqs, 'mrupdater-notifs', message)
