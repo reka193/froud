@@ -1,28 +1,21 @@
 import boto3
 import sys
-from common import load_config_json
-from common import write_to_file
-from common import init_keys
-from common import parsing
-from common import bucket_upload
+import common
 
 
 def init():
     #init_keys()
-    description = '[*] SQS message scanner.\n' \
+    description = '\n[*] SQS message scanner.\n' \
                   '[*] Specify the name of the queue to save the messages from.\n' \
-                  '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n' \
-                  '    usage: \n' \
-                  '    python sqs.py -q <QueueName> -f <FileName>\n' \
-                  '    python sqs.py -q <QueueName> -b <BucketName>'
+                  '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
 
     required_params = [['-q', '--queueName', 'Specify the name of the queue.']]
     optional_params = [['-b', '--bucketName', 'Specify the name of the bucket.']]
 
-    args = parsing(description, required_params, optional_params)
+    args = common.parsing(description, required_params, optional_params)
 
     # If the config file cannot be loaded, boto3 will use the credentials from ~/.aws/credentials
-    config_parsing_was_successful, region_name_for_logs = load_config_json("conf.json")
+    config_parsing_was_successful, region_name_for_logs = common.load_config_json("conf.json")
 
     if not config_parsing_was_successful:
         region_name_for_logs = "N/A"
@@ -58,16 +51,12 @@ def main():
 
     args, region_name_for_logs, s3_client = init()
 
-    if args['queueName']:
-        queue_name = str(args['queueName'])
-    else:
-        print ("Please specify a queue name.")
-        sys.exit()
-
+    queue_name = str(args['queueName'])
+    
     data = scan_queue(queue_name)
-    filenames = write_to_file('sqs', queue_name, data)
+    filenames = common.write_to_file('sqs', queue_name, data)
 
-    bucket_upload(args['bucket'], s3_client, filenames)
+    common.bucket_upload(args['bucket'], s3_client, filenames)
 
 
 if __name__ == '__main__':
