@@ -1,28 +1,21 @@
 import boto3
 from botocore.exceptions import ClientError
 import sys
-from common import load_config_json
-from common import init_keys
-from common import write_to_file
-from common import parsing
-from common import bucket_upload
+import common
 
 
 def init():
-    description = "[*] Scanner for DynamoDB tables.\n " \
-                "[*] The results are saved to $currentpath/dynamodb_scan folder.\n" \
-                "[*] If a bucket is provided, the results are uploaded to the bucket. \n\n" \
-                "   usage: \n" \
-                "   python dynamodb.py -t <TableName>\n" \
-                "   python dynamodb.py -t <TableName> -b <BucketName>"
+    description = "\n[*] Scanner for DynamoDB tables.\n" \
+                  "[*] The results will be saved to $currentpath/dynamodb_scan folder.\n" \
+                  "[*] If a bucket is provided, the results are uploaded to the bucket. \n\n"
     required_params = [['-t', '--tableName', 'Specify the name of the table.']]
     optional_params = [['-b', '--bucketName', 'Specify the name of the bucket.']]
 
-    args = parsing(description, required_params, optional_params)
+    args = common.parsing(description, required_params, optional_params)
 
     # If the config file cannot be loaded then boto3 will use its cached data because the global variables
-    # contain nonesens ("N/A")
-    config_parsing_was_successful, region_name_for_logs = load_config_json("conf.json")
+    # contain nonsense ("N/A")
+    config_parsing_was_successful, region_name_for_logs = common.load_config_json("conf.json")
 
     if not config_parsing_was_successful:
         region_name_for_logs = "N/A"
@@ -30,7 +23,7 @@ def init():
     session = boto3.Session()
     s3_client = session.client('s3')
 
-    init_keys()
+    common.init_keys()
 
     return args, region_name_for_logs, s3_client
 
@@ -60,16 +53,12 @@ def main():
 
     args, region_name_for_logs, s3_client = init()
 
-    if args['tableName']:
-        table = str(args['tableName'])
-    else:
-        print ("Please specify a table name.")
-        sys.exit()
+    table = str(args['tableName'])
 
     data = scan_table(table, region_name_for_logs)
-    filenames = write_to_file('dynamodb', table, data)
+    filenames = common.write_to_file('dynamodb', table, data)
 
-    bucket_upload(args['bucket'], s3_client, filenames)
+    common.bucket_upload(args['bucket'], s3_client, filenames)
 
 
 if __name__ == '__main__':
