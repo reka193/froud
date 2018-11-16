@@ -27,10 +27,7 @@ def main():
                       "[*] The results will be saved to $currentpath/dynamodb_scan folder.\n" \
                       "[*] If a bucket is provided, the results are uploaded to the bucket. \n\n"
 
-    required_params = [['-t', '--tableName', 'Specify the name of the table.']]
-
-    args, dynamo_client, s3_client = common.init(description, 'sqs', optional_params=optional_params,
-                                                 required_params=required_params)
+    args, dynamo_client, s3_client = common.init(description, 'dynamodb')
 
     data = scan_table(str(args['tableName']), dynamo_client)
     filenames = common.write_to_file_1000('dynamodb', str(args['tableName']), data)
