@@ -24,8 +24,7 @@ def scan_queue(queue_name, sqs):
 
 def main():
 
-    description = '\n[*] SQS message scanner.\n' \
-                  '[*] Specify the name of the queue to save the messages from.\n' \
+    description = '\n[*] SQS message scanner.\n[*] Specify the name of the queue to save the messages from.\n' \
                   '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
 
     required_params = [['-q', '--queueName', 'Specify the name of the queue.']]
