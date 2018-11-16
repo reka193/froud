@@ -29,7 +29,6 @@ def main():
                   '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
 
     required_params = [['-q', '--queueName', 'Specify the name of the queue.']]
-    optional_params = [['-b', '--bucketName', 'Specify the name of the bucket.']]
 
     args, sqs, s3_client = common.init(description, 'sqs', optional_params=optional_params,
                                        required_params=required_params)
