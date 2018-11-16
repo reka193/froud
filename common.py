@@ -34,7 +34,7 @@ def init_keys():
     secret_access_key = get_keys_and_token("SecretAccessKey")
     token = get_keys_and_token("Token")
 
-    save_credentials(access_key_id, secret_access_key, token)
+    return access_key_id, secret_access_key, token
 
 
 def get_keys_and_token(key):
@@ -54,70 +54,58 @@ def get_keys_and_token(key):
     return final_request_value
 
 
-def save_credentials(access_key_id, secret_access_key, token):
-    final_directory = '/home/ec2-user/.aws'
-
-    if not os.path.exists(final_directory):
-        os.makedirs(final_directory)
-
-    file_name = final_directory + '/credentials'
-
-    with open(file_name, 'w+') as f:
-        f.write("[default]\naws_access_key_id = {}\naws_secret_access_key = {}\naws_session_token = {}\n".format(access_key_id, secret_access_key, token))
-
-
-def load_config_json(config_json_filename):
+def load_config_json(config_json_filename, sqs=None):
+    data = []
     try:
-        with open(config_json_filename) as config_file_handler:
+        with open(config_json_filename, 'r') as f:
             try:
-                config_json = json.load(config_file_handler)
+                config_json = json.load(f)
             except Exception as e:
                 print("Error parsing config file: {}".format(e))
-                sys.exit()
-    except Exception as e:
-        print("Error opening file: {}".format(e))
-        return False
+                print("Using shared credentials and config file (~/.aws/..).")
+                return False, data
+    except IOError:
+        print("Config file not found, using shared credentials and config file (~/.aws/..).")
+        return False, data
 
     try:
-        region_name_for_logs = config_json["region_name_for_logs"]
-    except Exception as e:
-        print("Error parsing 'region_name_for_logs' from the config file: {}".format(e))
+        data.append(config_json["DEFAULT"]["aws_access_key_id"])
+        data.append(config_json["DEFAULT"]["aws_secret_access_key"])
+        data.append(config_json["DEFAULT"]["aws_session_token"])
+        data.append(config_json["DEFAULT"]["region"])
+
+        if sqs:
+            data.append(config_json["SQS"]["fuzz_endpoint_url"])
+            data.append(config_json["SQS"]["sqs_message"])
+
+    except KeyError as key:
+        print("Error parsing the config file: {}".format(key))
         sys.exit()
 
-    return True, region_name_for_logs
+    return True, data
 
 
-def upload_files(s3_client, filenames, bucket_name):
+def create_client(config_success, data, client_type):
+    if not config_success:
+        session = boto3.Session()
+        client = session.client(client_type)
+        s3_client = session.client('s3')
+    else:
+        aws_access_key_id, aws_secret_access_key, aws_session_token, region_name = data
+        session = boto3.Session(aws_access_key_id=aws_access_key_id,
+                                aws_secret_access_key=aws_secret_access_key,
+                                aws_session_token=aws_session_token)
 
-    print('Uploading files to the bucket {}...'.format(bucket_name))
-    for f in filenames:
         try:
-            key = f.split('/')[-2:]
-            key = key[0] + '/' + key[1]
-            tc = boto3.s3.transfer.TransferConfig()
-            t = boto3.s3.transfer.S3Transfer(client=s3_client, config=tc)
-            t.upload_file(f, bucket_name, key, extra_args={'ACL': 'public-read'})
-
-            file_url = 'https://{}.s3.amazonaws.com/{}'.format(bucket_name, key)
-            print('The uploaded file is public and accessible with the following url: \n    {}'.format(file_url))
-        except S3UploadFailedError:
-            print('File upload is not successful: PutObject permission missing.')
+            client = session.client(client_type, region_name)
+            s3_client = session.client('s3')
+        except ValueError as error:
+            print('Error: {}'.format(error))
+            sys.exit()
+    return client, s3_client
 
 
-def print_table(values, fieldnames):
-    values.sort()
-    x = PrettyTable()
-    x.field_names = fieldnames
-    for field in fieldnames:
-        x.align[field] = "l"
-
-    for value in values:
-        x.add_row(value)
-
-    print(x)
-
-
-def write_to_file(service, resource_name, data):
+def write_to_file_1000(service, resource_name, data):
 
     print('Writing files...'.format(service))
     current_directory = os.getcwd()
@@ -150,3 +138,44 @@ def write_to_file(service, resource_name, data):
     print('Files can be found in $currentpath/{}_scan folder.'.format(service))
 
     return filenames
+
+
+def bucket_upload(bucket, s3_client, filenames):
+    if bucket:
+        bucket_name = bucket
+        try:
+            upload_files(s3_client, filenames, bucket_name)
+        except Exception as e:
+            print(e)
+
+
+def upload_files(s3_client, filenames, bucket_name):
+
+    print('Uploading files to the bucket {}...'.format(bucket_name))
+    for f in filenames:
+        try:
+            key = f.split('/')[-2:]
+            key = key[0] + '/' + key[1]
+            tc = boto3.s3.transfer.TransferConfig()
+            t = boto3.s3.transfer.S3Transfer(client=s3_client, config=tc)
+            t.upload_file(f, bucket_name, key, extra_args={'ACL': 'public-read'})
+
+            file_url = 'https://{}.s3.amazonaws.com/{}'.format(bucket_name, key)
+            print('The uploaded file is public and accessible with the following url: \n    {}'.format(file_url))
+        except S3UploadFailedError:
+            print('File upload is not successful: PutObject permission missing.')
+
+
+def print_table(values, fieldnames):
+    values.sort()
+    x = PrettyTable()
+    x.field_names = fieldnames
+    for field in fieldnames:
+        x.align[field] = "l"
+
+    for value in values:
+        x.add_row(value)
+
+    print(x)
+
+
