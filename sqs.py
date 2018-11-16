@@ -24,15 +24,14 @@ def scan_queue(queue_name, sqs):
 
 def main():
 
-    description = '\n[*] SQS message scanner.\n[*] Specify the name of the queue to save the messages from.\n' \
+    description = '\n[*] SQS message scanner.\n' \
+                  '[*] Specify the name of the queue to save the messages from.\n' \
                   '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
 
-    required_params = [['-q', '--queueName', 'Specify the name of the queue.']]
-
-    args, sqs, s3_client = common.init(description, 'sqs', optional_params=optional_params,
-                                       required_params=required_params)
+    args, sqs, s3_client = common.init(description, 'sqs')
 
     data = scan_queue(str(args['queueName']), sqs)
+
     filenames = common.write_to_file_1000('sqs', str(args['queueName']), data)
 
     if args['bucketName']:
