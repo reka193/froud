@@ -4,42 +4,38 @@ import re
 import os
 import sys
 from prettytable import PrettyTable
-from common import upload_files
-from common import load_config_json
-from common import init_keys
-from common import parsing
+from botocore.exceptions import EndpointConnectionError
+import common
 
 
 def init():
-    description = '[*] Cloudwatch log scanner.\n'
-    '[*] The results are saved to $currentpath/cw_logs folder.\n'
+    description = '\n[*] Cloudwatch log scanner.\n'
+    '[*] The results will be saved to $currentpath/cw_logs folder.\n'
     '[*] The logs are read for a specified number of hours until the current time. Default value: 24 hours.\n'
     '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
-    '   usage: \n    '
-    '   python cloudwatch.py -t <TimeInHours>\n'
-    '   python cloudwatch.py -b <BucketName>'
     optional_params = [['-b', '--bucketName', 'Specify the name of the bucket.'],
                        ['-t', '--time', 'Specify the number of hours to read the logs '
                                         'until the current time. Default value: 24 hours.']]
 
-    args = parsing(description, optional_params=optional_params)
+    args = common.parsing(description, optional_params=optional_params)
 
-    # If the config file cannot be loaded then boto3 will use its cached data because the global variables contain nonesens ("N/A")
-    config_parsing_was_successful, region_name_for_logs = load_config_json(
-        "conf.json")
+    config_success, data = common.load_config_json("conf.json")
 
-    if not config_parsing_was_successful:
-        region_name_for_logs = "N/A"
+    # If the config file can not be found, shared credentials are used from ~/.aws/credentials and /config
+    logs_client, s3_client = common.create_client(config_success, data, 'logs')
 
-    init_keys()
-
-    logs_client = boto3.client('logs', region_name=region_name_for_logs)
-
-    return args, region_name_for_logs, logs_client
+    return args, logs_client, s3_client
 
 
 def list_and_save(logs_client, args):
-    groups = logs_client.describe_log_groups()['logGroups']
+
+    try:
+        groups = logs_client.describe_log_groups()['logGroups']
+
+    except EndpointConnectionError as error:
+        print('Error: {}'.format(error))
+        sys.exit()
+
     values = []
     filenames = []
 
@@ -69,6 +65,8 @@ def list_and_save(logs_client, args):
             final_directory = os.path.join(current_directory, r'cw_logs')
             if not os.path.exists(final_directory):
                 os.makedirs(final_directory)
+
+            file_name = ""
 
             try:
                 message = ''
@@ -107,30 +105,19 @@ def print_table(values):
 
 
 def main():
-    args, region_name_for_logs, logs_client = init()
+    args, logs_client, s3_client = init()
 
-    try:
-        print('Collecting CloudWatch logs...')
-        filenames, values = list_and_save(logs_client, args)
-
-    except:
-        print('Error collecting logs.')
-        sys.exit()
+    print('Collecting CloudWatch logs...')
+    filenames, values = list_and_save(logs_client, args)
 
     print_table(values)
 
-    try:
-        session = boto3.Session()
-        s3_client = session.client('s3')
-
-        if args['bucketName']:
-            bucket_name = args['bucketName']
-            if filenames:
-                upload_files(s3_client, filenames, bucket_name)
-            else:
-                print('There are no files to upload.')
-    except:
-        print('Error while creating the S3 client.')
+    if args['bucketName']:
+        bucket_name = args['bucketName']
+        if filenames:
+            common.upload_files(s3_client, filenames, bucket_name)
+        else:
+            print('There are no files to upload.')
 
 
 if __name__ == '__main__':
