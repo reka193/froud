@@ -28,7 +28,6 @@ def main():
                       "[*] If a bucket is provided, the results are uploaded to the bucket. \n\n"
 
     required_params = [['-t', '--tableName', 'Specify the name of the table.']]
-    optional_params = [['-b', '--bucketName', 'Specify the name of the bucket.']]
 
     args, dynamo_client, s3_client = common.init(description, 'sqs', optional_params=optional_params,
                                                  required_params=required_params)
