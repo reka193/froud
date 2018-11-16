@@ -45,10 +45,8 @@ def main():
 
     args, sqs, s3_client = init()
 
-    queue_name = str(args['queueName'])
-
-    data = scan_queue(queue_name, sqs)
-    filenames = common.write_to_file_1000('sqs', queue_name, data)
+    data = scan_queue(str(args['queueName']), sqs)
+    filenames = common.write_to_file_1000('sqs', str(args['queueName']), data)
 
     if args['bucketName']:
         common.bucket_upload(args['bucket'], s3_client, filenames)
