@@ -15,22 +15,15 @@ def init():
 
     # If the config file cannot be loaded then boto3 will use its cached data because the global variables
     # contain nonsense ("N/A")
-    config_parsing_was_successful, region_name_for_logs = common.load_config_json("conf.json")
+    config_success, data = common.load_config_json("conf.json")
 
-    if not config_parsing_was_successful:
-        region_name_for_logs = "N/A"
+    # If the config file can not be found, shared credentials are used from ~/.aws/credentials and /config
+    dynamo_client, s3_client = common.create_client(config_success, data, 'dynamodb')
 
-    session = boto3.Session()
-    s3_client = session.client('s3')
-
-    common.init_keys()
-
-    return args, region_name_for_logs, s3_client
+    return args, dynamo_client, s3_client
 
 
-def scan_table(table, region_name_for_logs):
-
-    dynamo = boto3.client('dynamodb', region_name=region_name_for_logs)
+def scan_table(table, dynamo):
 
     try:
         response = dynamo.scan(TableName=table)
@@ -51,14 +44,15 @@ def scan_table(table, region_name_for_logs):
 
 def main():
 
-    args, region_name_for_logs, s3_client = init()
+    args, dynamo_client, s3_client = init()
 
     table = str(args['tableName'])
 
-    data = scan_table(table, region_name_for_logs)
-    filenames = common.write_to_file('dynamodb', table, data)
+    data = scan_table(table, dynamo_client)
+    filenames = common.write_to_file_1000('dynamodb', table, data)
 
-    common.bucket_upload(args['bucket'], s3_client, filenames)
+    if args['bucketName']:
+        common.bucket_upload(args['bucket'], s3_client, filenames)
 
 
 if __name__ == '__main__':
