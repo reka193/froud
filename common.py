@@ -10,6 +10,13 @@ from prettytable import PrettyTable
 
 
 def init(description, client_type, optional_params=None, required_params=None):
+    if client_type in ["dynamodb", "sqs"]:
+        optional_params = [['-b', '--bucketName', 'Specify the name of the bucket.']]
+        if client_type == "dynamodb":
+            required_params = [['-t', '--tableName', 'Specify the name of the table.']]
+        else:
+            required_params = [['-q', '--queueName', 'Specify the name of the queue.']]
+
     args = parsing(description, optional_params=optional_params, required_params=required_params)
     config_success, data = load_config_json("conf.json")
     client, s3_client = create_client(config_success, data, client_type)
@@ -185,5 +192,3 @@ def print_table(values, fieldnames):
         x.add_row(value)
 
     print(x)
-
-
