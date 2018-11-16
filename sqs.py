@@ -3,25 +3,6 @@ import common
 import sys
 
 
-def init():
-
-    description = '\n[*] SQS message scanner.\n' \
-                  '[*] Specify the name of the queue to save the messages from.\n' \
-                  '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
-
-    required_params = [['-q', '--queueName', 'Specify the name of the queue.']]
-    optional_params = [['-b', '--bucketName', 'Specify the name of the bucket.']]
-
-    args = common.parsing(description, required_params, optional_params)
-
-    config_success, data = common.load_config_json("conf.json")
-
-    # If the config file can not be found, shared credentials are used from ~/.aws/credentials and /config
-    sqs_client, s3_client = common.create_client(config_success, data, 'sqs')
-
-    return args, sqs_client, s3_client
-
-
 def scan_queue(queue_name, sqs):
     try:
         queue = sqs.create_queue(QueueName=queue_name)
@@ -43,7 +24,15 @@ def scan_queue(queue_name, sqs):
 
 def main():
 
-    args, sqs, s3_client = init()
+    description = '\n[*] SQS message scanner.\n' \
+                  '[*] Specify the name of the queue to save the messages from.\n' \
+                  '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
+
+    required_params = [['-q', '--queueName', 'Specify the name of the queue.']]
+    optional_params = [['-b', '--bucketName', 'Specify the name of the bucket.']]
+
+    args, sqs, s3_client = common.init(description, 'sqs', optional_params=optional_params,
+                                       required_params=required_params)
 
     data = scan_queue(str(args['queueName']), sqs)
     filenames = common.write_to_file_1000('sqs', str(args['queueName']), data)
