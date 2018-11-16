@@ -1,4 +1,3 @@
-import boto3
 import datetime
 import re
 import os
@@ -6,25 +5,6 @@ import sys
 from prettytable import PrettyTable
 from botocore.exceptions import EndpointConnectionError
 import common
-
-
-def init():
-    description = '\n[*] Cloudwatch log scanner.\n'
-    '[*] The results will be saved to $currentpath/cw_logs folder.\n'
-    '[*] The logs are read for a specified number of hours until the current time. Default value: 24 hours.\n'
-    '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
-    optional_params = [['-b', '--bucketName', 'Specify the name of the bucket.'],
-                       ['-t', '--time', 'Specify the number of hours to read the logs '
-                                        'until the current time. Default value: 24 hours.']]
-
-    args = common.parsing(description, optional_params=optional_params)
-
-    config_success, data = common.load_config_json("conf.json")
-
-    # If the config file can not be found, shared credentials are used from ~/.aws/credentials and /config
-    logs_client, s3_client = common.create_client(config_success, data, 'logs')
-
-    return args, logs_client, s3_client
 
 
 def list_and_save(logs_client, args):
@@ -105,7 +85,15 @@ def print_table(values):
 
 
 def main():
-    args, logs_client, s3_client = init()
+    description = '\n[*] Cloudwatch log scanner.\n'
+    '[*] The results will be saved to $currentpath/cw_logs folder.\n'
+    '[*] The logs are read for a specified number of hours until the current time. Default value: 24 hours.\n'
+    '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
+    optional_params = [['-b', '--bucketName', 'Specify the name of the bucket.'],
+                       ['-t', '--time', 'Specify the number of hours to read the logs '
+                                        'until the current time. Default value: 24 hours.']]
+
+    args, logs_client, s3_client = common.init(description, 'logs', optional_params)
 
     print('Collecting CloudWatch logs...')
     filenames, values = list_and_save(logs_client, args)
