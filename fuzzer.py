@@ -3,59 +3,34 @@ import json
 import re
 import boto3
 from kitty.model import String, Delimiter
-import sys
 import ast
+import common
 
 
 def init():
 
     # If the config file cannot be loaded then boto3 will use the aws credentials file
-    config_success, data = load_config_json("conf.json")
+    config_success, data = common.load_config_json("conf.json", sqs=True)
 
     if not config_success:
-        region_name = "N/A"
         aws_access_key_id = "N/A"
         aws_secret_access_key = "N/A"
+        aws_session_token = "N/A"
+        region_name = "N/A"
         fuzz_endpoint_url = ""
         message_to_fuzz = {}
 
     else:
-        region_name, aws_access_key_id, aws_secret_access_key, fuzz_endpoint_url, message_to_fuzz = data
+        aws_access_key_id, aws_secret_access_key, aws_session_token, region_name, fuzz_endpoint_url, message_to_fuzz = data
 
     sqs_client = boto3.resource('sqs',
-                                endpoint_url=fuzz_endpoint_url or None,
-                                region_name=region_name or None,
                                 aws_access_key_id=aws_access_key_id or None,
-                                aws_secret_access_key=aws_secret_access_key or None)
+                                aws_secret_access_key=aws_secret_access_key or None,
+                                aws_session_token=aws_session_token or None,
+                                region_name=region_name or None,
+                                endpoint_url=fuzz_endpoint_url or None)
 
     return sqs_client, message_to_fuzz
-
-
-def load_config_json(config_json_filename):
-    data = []
-    try:
-        with open(config_json_filename, 'r') as f:
-            try:
-                config_json = json.load(f)
-            except Exception as e:
-                print("Error parsing config file: {}".format(e))
-                sys.exit()
-    except Exception as e:
-        print("Config file not found.")
-        return False, data
-
-    try:
-        data.append(config_json["region_name"])
-        data.append(config_json["aws_access_key_id"])
-        data.append(config_json["aws_secret_access_key"])
-        data.append(config_json["fuzz_endpoint_url"])
-        data.append(config_json["sqs_message"][0])
-
-    except KeyError as key:
-        print("Error parsing 'region_name' from the config file: {}".format(key))
-        sys.exit()
-
-    return True, data
 
 
 def create_fuzz_messages(default_message, size=None):
