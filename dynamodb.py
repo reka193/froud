@@ -22,24 +22,6 @@ def scan_table(table, dynamo):
     return data
 
 
-def init():
-    description = "\n[*] Scanner for DynamoDB tables.\n" \
-                  "[*] The results will be saved to $currentpath/dynamodb_scan folder.\n" \
-                  "[*] If a bucket is provided, the results are uploaded to the bucket. \n\n"
-
-    required_params = [['-t', '--tableName', 'Specify the name of the table.']]
-    optional_params = [['-b', '--bucketName', 'Specify the name of the bucket.']]
-
-    args = common.parsing(description, required_params, optional_params)
-
-    config_success, data = common.load_config_json("conf.json")
-
-    # If the config file can not be found, shared credentials are used from ~/.aws/credentials and /config
-    dynamo_client, s3_client = common.create_client(config_success, data, 'dynamodb')
-
-    return args, dynamo_client, s3_client
-
-
 def main():
     description = "\n[*] Scanner for DynamoDB tables.\n" \
                       "[*] The results will be saved to $currentpath/dynamodb_scan folder.\n" \
