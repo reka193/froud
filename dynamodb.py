@@ -46,10 +46,8 @@ def main():
 
     args, dynamo_client, s3_client = init()
 
-    table = str(args['tableName'])
-
-    data = scan_table(table, dynamo_client)
-    filenames = common.write_to_file_1000('dynamodb', table, data)
+    data = scan_table(str(args['tableName']), dynamo_client)
+    filenames = common.write_to_file_1000('dynamodb', str(args['tableName']), data)
 
     if args['bucketName']:
         common.bucket_upload(args['bucket'], s3_client, filenames)
