@@ -4,12 +4,11 @@ import json
 import argparse
 from argparse import RawTextHelpFormatter
 import re
-from common import init_keys
-from common import print_table
+import common
 
 
 def init():
-    init_keys()
+    access_key, secret_key, token = common.init_keys()
 
     parser = argparse.ArgumentParser(
         description='[*] List of policies attached to the role of the instance profile.\n'
@@ -31,12 +30,16 @@ def init():
                         required=False)
     args = vars(parser.parse_args())
 
-    return args
+    return args, access_key, secret_key, token
 
 
-def policy_enumerate(args):
-    iam = boto3.client('iam')
-    iamres = boto3.resource('iam')
+def policy_enumerate(args, access_key, secret_key, token):
+    session = boto3.Session(aws_access_key_id=access_key,
+                            aws_secret_access_key=secret_key,
+                            aws_session_token=token)
+    iam = session.client('iam')
+    iamres = session.resource('iam')
+
     r = requests.get('http://169.254.169.254/latest/meta-data/iam/info')
     role_arn = json.loads(r.text)['InstanceProfileArn']
     role = role_arn.split('/')[1]
@@ -47,7 +50,18 @@ def policy_enumerate(args):
     print('\nThe following permissions belong to the role {}: \n'.format(role))
 
     values = []
+    values += attached_policy_enum(iam, iamres, response1)
+    values += managed_policy_enum(iamres, response2, role)
 
+    values_to_print = filter_results(values, args)
+
+    common.print_table(values_to_print, ["Service", "Action", "Resource", "Effect", "Policy name"])
+    
+
+def attached_policy_enum(iam, iamres, response1):
+    
+    values = []
+    
     for attached_policy in response1['AttachedPolicies']:
         role_policy1 = iamres.Policy(attached_policy['PolicyArn'])
 
@@ -65,7 +79,14 @@ def policy_enumerate(args):
                     values.append(compose_value(action, resource, effect, role_policy1.arn.split('/')[-1]))
             else:
                 values.append(compose_value(actions, resource, effect, role_policy1.arn.split('/')[-1]))
-
+                
+    return values
+    
+    
+def managed_policy_enum(iamres, response2, role):
+    
+    values = []
+    
     for policy_name in response2['PolicyNames']:
         role_policy2 = iamres.RolePolicy(role, policy_name)
         policy_statement = role_policy2.policy_document['Statement']
@@ -80,10 +101,7 @@ def policy_enumerate(args):
                     values.append(compose_value(action, resource, effect, role_policy2.name))
             else:
                 values.append(compose_value(actions, resource, effect, role_policy2.name))
-
-    values_to_print = filter_results(values, args)
-
-    print_table(values_to_print, ["Service", "Action", "Resource", "Effect", "Policy name"])
+    return values
 
 
 def compose_value(action, resource, effect, name):
@@ -130,5 +148,5 @@ def match_function(key_value, component):
 
 if __name__ == '__main__':
 
-    arguments = init()
-    policy_enumerate(arguments)
+    arguments, access_key_id, secret_access_key, session_token = init()
+    policy_enumerate(arguments, access_key_id, secret_access_key, session_token)
