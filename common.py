@@ -9,6 +9,14 @@ from boto3.exceptions import S3UploadFailedError
 from prettytable import PrettyTable
 
 
+def init(description, client_type, optional_params=None, required_params=None):
+    args = parsing(description, optional_params=optional_params, required_params=required_params)
+    config_success, data = load_config_json("conf.json")
+    client, s3_client = create_client(config_success, data, client_type)
+
+    return args, client, s3_client
+
+
 def parsing(description, required_params=None, optional_params=None):
     parser = argparse.ArgumentParser(description, formatter_class=RawTextHelpFormatter)
     required = parser.add_argument_group('required arguments')
