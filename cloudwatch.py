@@ -7,7 +7,7 @@ from botocore.exceptions import EndpointConnectionError
 import common
 
 
-def list_and_save(logs_client, args):
+def list_and_save(logs_client, start_time, stop_time):
 
     try:
         groups = logs_client.describe_log_groups()['logGroups']
@@ -18,13 +18,6 @@ def list_and_save(logs_client, args):
 
     values = []
     filenames = []
-
-    if args['time']:
-        hours_ago = datetime.datetime.utcnow() - datetime.timedelta(hours=int(args['time']))
-    else:
-        hours_ago = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
-    start_time = int(hours_ago.strftime("%s")) * 1000
-    stop_time = int(datetime.datetime.utcnow().strftime("%s")) * 1000
 
     for group in groups:
         group_name = group['logGroupName']
@@ -41,30 +34,40 @@ def list_and_save(logs_client, args):
             streamname = re.sub('[^\w\s-]', '', stream_name)
             gr_st = groupname + '--' + streamname
 
-            current_directory = os.getcwd()
-            final_directory = os.path.join(current_directory, r'cw_logs')
-            if not os.path.exists(final_directory):
-                os.makedirs(final_directory)
+            filenames += write_events(events, gr_st)
 
-            file_name = ""
-
-            try:
-                message = ''
-                for event in events:
-                    if event['message']:
-                        message = message + event['message'] + '\n'
-                if message:
-                    file_name = final_directory + '/' + gr_st + '.txt'
-                    filenames.append(file_name)
-                    with open(file_name, 'w+') as f:
-                        f.write(message)
-
-            except Exception as e:
-                print('File is skipped: {}, due to: {}'.format(file_name, e))
     print('Files downloaded to $currentpath/cw_logs folder.')
     values = set(values)
 
     return filenames, values
+
+
+def write_events(events, gr_st):
+
+    filenames = []
+
+    current_directory = os.getcwd()
+    final_directory = os.path.join(current_directory, r'cw_logs')
+    if not os.path.exists(final_directory):
+        os.makedirs(final_directory)
+
+    file_name = ""
+
+    try:
+        message = ''
+        for event in events:
+            if event['message']:
+                message = message + event['message'] + '\n'
+        if message:
+            file_name = final_directory + '/' + gr_st + '.txt'
+            filenames.append(file_name)
+            with open(file_name, 'w+') as f:
+                f.write(message)
+
+    except Exception as e:
+        print('File is skipped: {}, due to: {}'.format(file_name, e))
+
+    return filenames
 
 
 def print_table(values):
@@ -95,8 +98,15 @@ def main():
 
     args, logs_client, s3_client = common.init(description, 'logs', optional_params)
 
+    if args['time']:
+        hours_ago = datetime.datetime.utcnow() - datetime.timedelta(hours=int(args['time']))
+    else:
+        hours_ago = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
+    start_time = int(hours_ago.strftime("%s")) * 1000
+    stop_time = int(datetime.datetime.utcnow().strftime("%s")) * 1000
+
     print('Collecting CloudWatch logs...')
-    filenames, values = list_and_save(logs_client, args)
+    filenames, values = list_and_save(logs_client, start_time, stop_time)
 
     print_table(values)
 
