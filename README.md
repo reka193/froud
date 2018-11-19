@@ -46,3 +46,8 @@ example:
  Scans the available Cloudwatch logs, saving the results locally or uploading them publicly to an S3 bucket.
  ### fuzzer.py
  Sends fuzz messages to the given SQS queue.
+ 
+ More information about usage can be found using:
+ ```
+ python chosen_file.py -h
+ ```
