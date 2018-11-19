@@ -5,6 +5,7 @@ import boto3
 from kitty.model import String, Delimiter
 import ast
 import common
+import sys
 
 
 def init():
@@ -105,6 +106,7 @@ def fuzz(sqs_client, queue_name, sqs_message):
 
     except Exception as e:
         print(e)
+        sys.exit()
 
     print('Generate messages for the queue {}'.format(queue_name))
     messages = generate_sqs_message_mutations(sqs_message)
