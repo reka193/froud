@@ -28,7 +28,6 @@ def main():
                       "[*] If a bucket is provided, the results are uploaded to the bucket. \n\n"
 
     arguments, dynamo_client, s3_client = common.init(description, 'dynamodb')
-    
     table = str(arguments['tableName'])
 
     data = scan_table(table, dynamo_client)
