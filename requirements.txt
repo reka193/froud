@@ -1,0 +1,6 @@
+botocore
+boto3==1.9.47
+requests==2.20.1
+prettytable==0.7.2
+skew==0.17.0
+kittyfuzzer==0.7.1
