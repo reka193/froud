@@ -56,7 +56,7 @@ def policy_enumerate(args, access_key, secret_key, token):
     values_to_print = filter_results(values, args)
 
     common.print_table(values_to_print, ["Service", "Action", "Resource", "Effect", "Policy name"])
-    
+
 
 def attached_policy_enum(iam, iamres, response1):
     
