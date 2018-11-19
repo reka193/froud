@@ -1,14 +1,16 @@
 {
-"region_name": "local",
-"aws_access_key_id": "asd",
-"aws_secret_access_key": "asd",
-"region_name_for_logs": "us-west-2",
-"upload_endpoint_url": "http://localhost:8000",
-"fuzz_endpoint_url": "http://localhost:8001",
-"sqs_message":[
-        {
-            "timestamp":"#2018-08-01T10:57:36Z#",
-            "id":1
-        }
-    ]
+  "DEFAULT": {
+    "aws_access_key_id": "ID",
+    "aws_secret_access_key": "KEY",
+    "aws_session_token": "TOKEN",
+    "region": "REGION"
+  },
+  "SQS": { 
+    "fuzz_endpoint_url":"",
+    "sqs_message": {
+      "timestamp":"#2018-10-19#",
+      "id":"#1#",
+      "data":"#information"
+    }
+  }
 }
