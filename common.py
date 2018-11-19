@@ -122,7 +122,7 @@ def create_client(config_success, data, client_type):
 
 def write_to_file_1000(service, resource_name, data):
 
-    print('Writing files...'.format(service))
+    print('Writing files...')
     current_directory = os.getcwd()
     final_directory = os.path.join(current_directory, r'{}_scan'.format(service))
     if not os.path.exists(final_directory):
