@@ -74,7 +74,7 @@ def attached_policy_enum(iam, iamres, response1):
             effect = statement['Effect']
             actions = statement['Action']
 
-            if type(actions) is list:
+            if isinstance(actions, list):
                 for action in actions:
                     values.append(compose_value(action, resource, effect, role_policy1.arn.split('/')[-1]))
             else:
