@@ -1,5 +1,6 @@
 # froud
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/ecea050064d14799960d678c936aaf78)](https://app.codacy.com/app/reka193/froud?utm_source=github.com&utm_medium=referral&utm_content=reka193/froud&utm_campaign=Badge_Grade_Dashboard)
 [![Maintainability](https://api.codeclimate.com/v1/badges/9244f8bb4c71e85e3851/maintainability)](https://codeclimate.com/github/reka193/froud/maintainability)
 
 Penetration testing toolset for the Amazon cloud.
