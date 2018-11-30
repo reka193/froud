@@ -1,5 +1,7 @@
 # froud
 
+[![Maintainability](https://api.codeclimate.com/v1/badges/9244f8bb4c71e85e3851/maintainability)](https://codeclimate.com/github/reka193/froud/maintainability)
+
 Penetration testing toolset for the Amazon cloud.
 
 ## Quick installation
