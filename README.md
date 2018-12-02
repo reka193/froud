@@ -29,10 +29,10 @@ If the config file is not present, the scripts will use the shared credentials a
 
 ## Usage
 ```
-  python chosen_file.py
+  $ python chosen_file.py
 example:
-  python rolepolicies.py
-  python dynamodb.py -t <TableName>
+  $ python rolepolicies.py
+  $ python dynamodb.py -t <TableName>
 ```
   
  ## Tools
@@ -52,5 +52,5 @@ example:
  
  More information about usage can be found using:
  ```
- python chosen_file.py -h
+ $ python chosen_file.py -h
  ```
