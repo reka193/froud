@@ -10,7 +10,7 @@
     "sqs_message": {
       "timestamp":"#2018-10-19#",
       "id":"#1#",
-      "data":"#information"
+      "data":"#information#"
     }
   }
 }
