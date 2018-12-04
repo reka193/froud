@@ -198,7 +198,7 @@ def exception(error, fail):
     print(fail)
     resp = error.response['Error']['Code']
     if resp == 'AccessDenied':
-        print('Required AWS permission is missing: {}\n'.format(resp))
+        print('Required AWS permission is missing: \n {}'.format(error))
     else:
         print('{}'.format(resp))
     sys.exit()
