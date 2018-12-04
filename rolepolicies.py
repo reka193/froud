@@ -3,6 +3,7 @@ import requests
 import json
 import argparse
 from argparse import RawTextHelpFormatter
+from botocore.exceptions import ClientError
 import re
 import common
 
@@ -44,8 +45,15 @@ def policy_enumerate(args, access_key, secret_key, token):
     role_arn = json.loads(r.text)['InstanceProfileArn']
     role = role_arn.split('/')[1]
 
-    response1 = iam.list_attached_role_policies(RoleName=role)
-    response2 = iam.list_role_policies(RoleName=role)
+    response1 = None
+    response2 = None
+
+    try:
+        response1 = iam.list_attached_role_policies(RoleName=role)
+        response2 = iam.list_role_policies(RoleName=role)
+
+    except ClientError as error:
+        common.exception(error, 'List role policy failed.')
 
     print('\nThe following permissions belong to the role {}: \n'.format(role))
 
@@ -59,15 +67,20 @@ def policy_enumerate(args, access_key, secret_key, token):
 
 
 def attached_policy_enum(iam, iamres, response1):
-    
     values = []
-    
+
     for attached_policy in response1['AttachedPolicies']:
         role_policy1 = iamres.Policy(attached_policy['PolicyArn'])
 
-        policy = iam.get_policy(PolicyArn=role_policy1.arn)
-        policy_version = iam.get_policy_version(PolicyArn=role_policy1.arn,
-                                                VersionId=policy['Policy']['DefaultVersionId'])
+        policy_version = None
+
+        try:
+            policy = iam.get_policy(PolicyArn=role_policy1.arn)
+            policy_version = iam.get_policy_version(PolicyArn=role_policy1.arn,
+                                                    VersionId=policy['Policy']['DefaultVersionId'])
+
+        except ClientError as error:
+            common.exception(error, 'Get role policy failed.')
 
         for statement in policy_version['PolicyVersion']['Document']['Statement']:
             resource = statement['Resource']
@@ -79,14 +92,13 @@ def attached_policy_enum(iam, iamres, response1):
                     values.append(compose_value(action, resource, effect, role_policy1.arn.split('/')[-1]))
             else:
                 values.append(compose_value(actions, resource, effect, role_policy1.arn.split('/')[-1]))
-                
+
     return values
-    
-    
+
+
 def managed_policy_enum(iamres, response2, role):
-    
     values = []
-    
+
     for policy_name in response2['PolicyNames']:
         role_policy2 = iamres.RolePolicy(role, policy_name)
         policy_statement = role_policy2.policy_document['Statement']
@@ -128,10 +140,10 @@ def filter_results(values, args):
                 if key == 'policyname':
                     match = match_function(key_value, value[4])
                     break
-                if key == 'action' and key_value and not\
+                if key == 'action' and key_value and not \
                         (re.match(str(key_value), value[1]) or
                          (value[1] == '*' and value[0] in ["iam", "s3", "dynamodb", "lambda"])):
-                        match = False
+                    match = False
                 break
         if match:
             values_to_print.append(value)
@@ -147,6 +159,5 @@ def match_function(key_value, component):
 
 
 if __name__ == '__main__':
-
     arguments, access_key_id, secret_access_key, session_token = init()
     policy_enumerate(arguments, access_key_id, secret_access_key, session_token)
