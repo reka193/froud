@@ -28,22 +28,20 @@ def enum_resources(arn, services):
     values = []
 
     for service in services:
-        instances = []
         arn.service.pattern = service
         try:
             instances = skew.scan('{}/*'.format(arn))
+            if instances:
+                for instance in instances:
+                    region = str(instance).split(':')[3]
+                    resource_name = str(instance).split('/')[1]
+                    values.append([service, region, resource_name])
         except ClientError as error:
             resp = error.response['Error']['Code']
             if resp == 'ExpiredTokenException':
                 print('AWS token has expired: \n{}'.format(error))
             else:
                 print('{}'.format(resp))
-
-        if instances:
-            for instance in instances:
-                region = str(instance).split(':')[3]
-                resource_name = str(instance).split('/')[1]
-                values.append([service, region, resource_name])
 
     return values
 
