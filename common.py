@@ -192,3 +192,13 @@ def print_table(values, fieldnames):
         x.add_row(value)
 
     print(x)
+
+
+def exception(error, fail):
+    print(fail)
+    resp = error.response['Error']['Code']
+    if resp == 'AccessDenied':
+        print('Required AWS permission is missing: \n'.format(resp))
+    else:
+        print('{}'.format(resp))
+    sys.exit()
