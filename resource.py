@@ -42,6 +42,7 @@ def enum_resources(arn, services):
                 print('AWS token has expired: \n{}'.format(error))
             else:
                 print('{}'.format(resp))
+            sys.exit()
 
     return values
 
