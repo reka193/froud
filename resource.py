@@ -3,19 +3,19 @@ from skew.arn import ARN
 import sys
 import argparse
 from argparse import RawTextHelpFormatter
-from common import init_keys
-from common import print_table
+import common
+from botocore.exceptions import ClientError
 
 
 def init():
-    init_keys()
+    common.init_keys()
 
     parser = argparse.ArgumentParser(
-        description='[*] List of available resources.\n'
-                    '[*] The results can be filtered by the name of the service. Default value: [dynamodb, s3, sqs]'
-                    '\n\nusage: \n    python resource.py -s <ServiceName>',
+        description='\n[*] List of available resources.\n'
+                    '[*] The results can be filtered by the name of the service. Default value: [dynamodb, s3, sqs]',
         formatter_class=RawTextHelpFormatter)
-    parser.add_argument('-s', '--service', help='Filter the type of services by choosing from {dynamodb, s3, sqs}. At a time, only one service can be used for filtering.', required=False)
+    parser.add_argument('-s', '--service', help='Filter the type of services by choosing from {dynamodb, s3, sqs}. At '
+                                                'a time, only one service can be used for filtering.', required=False)
 
     args = vars(parser.parse_args())
 
@@ -28,17 +28,23 @@ def enum_resources(arn, services):
     values = []
 
     for service in services:
+        instances = []
         arn.service.pattern = service
         try:
             instances = skew.scan('{}/*'.format(arn))
-            if instances:
-                for instance in instances:
-                    region = str(instance).split(':')[3]
-                    resource_name = str(instance).split('/')[1]
-                    values.append([service, region, resource_name])
+        except ClientError as error:
+            resp = error.response['Error']['Code']
+            if resp == 'ExpiredTokenException':
+                print('AWS token has expired: \n{}'.format(error))
+            else:
+                print('{}'.format(resp))
 
-        except Exception as e:
-            print(e)
+        if instances:
+            for instance in instances:
+                region = str(instance).split(':')[3]
+                resource_name = str(instance).split('/')[1]
+                values.append([service, region, resource_name])
+
     return values
 
 
@@ -57,7 +63,7 @@ def main():
     values = enum_resources(arn, services)
 
     print('\nAvailable resources: \n')
-    print_table(values, ["Service", "Region", "Name"])
+    common.print_table(values, ["Service", "Region", "Name"])
 
 
 if __name__ == '__main__':
