@@ -1,6 +1,7 @@
 from botocore.exceptions import ClientError
 from botocore.exceptions import EndpointConnectionError
 import common
+import sys
 
 
 def scan_queue(queue_name, sqs):
@@ -8,6 +9,7 @@ def scan_queue(queue_name, sqs):
         queue = sqs.create_queue(QueueName=queue_name)
     except EndpointConnectionError as error:
         print('The requested queue could not be reached. \n{}'.format(error))
+        sys.exit()
     except ClientError as error:
         common.exception(error, 'Queue could not be reached. \n{}'.format(error))
     # get messages
