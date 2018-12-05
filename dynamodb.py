@@ -1,16 +1,21 @@
 from botocore.exceptions import ClientError
-import sys
 import common
+import sys
+from botocore.exceptions import EndpointConnectionError
 
 
 def scan_table(table, dynamo):
 
     try:
         response = dynamo.scan(TableName=table)
-    except ClientError as ce:
-        if ce.response['Error']['Code'] == 'ResourceNotFoundException':
-            print('Requested table not found.')
+    except EndpointConnectionError as error:
+        print('The requested queue could not be reached. \n{}'.format(error))
         sys.exit()
+    except ClientError as error:
+        if error.response['Error']['Code'] == 'ResourceNotFoundException':
+            print('Requested table not found.')
+        else:
+            common.exception(error, 'Scan dynamodb table failed.')
 
     print('Scanning the table...')
     data = response['Items']
@@ -28,6 +33,7 @@ def main():
                       "[*] If a bucket is provided, the results are uploaded to the bucket. \n\n"
 
     arguments, dynamo_client, s3_client = common.init(description, 'dynamodb')
+
     table = str(arguments['tableName'])
 
     data = scan_table(table, dynamo_client)
