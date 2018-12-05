@@ -16,7 +16,7 @@ Penetration testing toolset for the Amazon cloud.
 1. Create file: ~/.skew
 2. Edit file's content:
 accounts:
-  "ACCOUNT_ID_NUMBER":
+  "$ACCOUNT_ID_NUMBER$":
     profile: default
 ```
 Find example file in the repo: .skew
