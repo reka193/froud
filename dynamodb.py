@@ -9,7 +9,7 @@ def scan_table(table, dynamo):
     try:
         response = dynamo.scan(TableName=table)
     except EndpointConnectionError as error:
-        print('The requested queue could not be reached. \n{}'.format(error))
+        print('The requested table could not be reached. \n{}'.format(error))
         sys.exit()
     except ClientError as error:
         if error.response['Error']['Code'] == 'ResourceNotFoundException':
