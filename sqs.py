@@ -2,9 +2,11 @@ from botocore.exceptions import ClientError
 from botocore.exceptions import EndpointConnectionError
 import common
 import sys
+import boto3
 
 
 def scan_queue(queue_name, sqs):
+    queue = None
     try:
         queue = sqs.create_queue(QueueName=queue_name)
     except EndpointConnectionError as error:
@@ -15,7 +17,7 @@ def scan_queue(queue_name, sqs):
     # get messages
     msgs = []
     while True:
-        messages = queue.receive_messages(VisibilityTimeout=120, WaitTimeSeconds=60)
+        messages = queue.receive_messages(VisibilityTimeout=120, WaitTimeSeconds=20)
         for message in messages:
             msgs.append(message.body)
         if not messages or len(msgs) > 100:
@@ -30,6 +32,8 @@ def main():
                   '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
 
     args, sqs, s3_client = common.init(description, 'sqs')
+    sqs = boto3.resource('sqs')
+
 
     data = scan_queue(str(args['queueName']), sqs)
 
