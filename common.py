@@ -112,7 +112,10 @@ def create_client(config_success, data, client_type):
                                 aws_session_token=aws_session_token)
 
         try:
-            client = session.client(client_type, region_name)
+            if client_type == 'sqs':
+                client = boto3.resource('sqs', region_name=region_name)
+            else:
+                client = session.client(client_type, region_name)
             s3_client = session.client('s3')
         except ValueError as error:
             print('Error: {}'.format(error))
@@ -195,10 +198,9 @@ def print_table(values, fieldnames):
 
 
 def exception(error, fail):
-    print(fail)
     resp = error.response['Error']['Code']
     if resp == 'AccessDenied':
         print('Required AWS permission is missing: \n{}'.format(error))
     else:
-        print('{}'.format(error))
+        print(fail + '{}'.format(error))
     sys.exit()
