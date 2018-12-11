@@ -4,17 +4,19 @@ import os
 import sys
 from prettytable import PrettyTable
 from botocore.exceptions import EndpointConnectionError
+from botocore.exceptions import ClientError
 import common
 
 
 def list_and_save(logs_client, start_time, stop_time):
-
+    groups = []
     try:
         groups = logs_client.describe_log_groups()['logGroups']
-
     except EndpointConnectionError as error:
         print('Error: {}'.format(error))
         sys.exit()
+    except ClientError as error:
+        common.exception(error, 'Describe log groups failed.')
 
     values = []
     filenames = []
