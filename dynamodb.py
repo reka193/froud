@@ -40,7 +40,7 @@ def main():
     filenames = common.write_to_file_1000('dynamodb', table, data)
 
     if arguments['bucketName']:
-        common.bucket_upload(arguments['bucket'], s3_client, filenames)
+        common.bucket_upload(arguments['bucketName'], s3_client, filenames)
 
 
 if __name__ == '__main__':
