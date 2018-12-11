@@ -32,8 +32,6 @@ def main():
                   '[*] If a bucket is provided, the results are uploaded to the bucket. \n\n'
 
     args, sqs, s3_client = common.init(description, 'sqs')
-    sqs = boto3.resource('sqs')
-
 
     data = scan_queue(str(args['queueName']), sqs)
 
