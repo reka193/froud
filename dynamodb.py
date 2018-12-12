@@ -14,6 +14,8 @@ def scan_table(table, dynamo):
     except ClientError as error:
         if error.response['Error']['Code'] == 'ResourceNotFoundException':
             print('Requested table not found.')
+            print(error)
+            sys.exit()
         else:
             common.exception(error, 'Scan dynamodb table failed.')
 
